@@ -1,0 +1,24 @@
+{
+  "name": "slack-command-times",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/t-mimura/slack-command-times.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/t-mimura/slack-command-times/issues"
+  },
+  "homepage": "https://github.com/t-mimura/slack-command-times#readme",
+  "dependencies": {
+    "botkit": "^0.4.2"
+  }
+}
