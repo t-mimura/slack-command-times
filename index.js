@@ -1,7 +1,8 @@
 const botkit = require('botkit');
 const secrets = require('./.times/.secrets.json');
 const env = {
-  port: 3000
+  port: 3000,
+  json_file_store_path: './.times/.json_file_store/'
 };
 
 const scopes = ['commands'];
@@ -13,7 +14,8 @@ const addToSlackButton = `
   </a>`;
 
 const controller = botkit.slackbot({
-  debug: false
+  debug: false,
+  json_file_store: env.json_file_store_path
 }).configureSlackApp({
   clientId: secrets.clientId,
   clientSecret: secrets.clientSecret,
