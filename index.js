@@ -1,4 +1,5 @@
 const botkit = require('botkit');
+const moment = require('moment');
 const secrets = require('./.times/.secrets.json');
 const env = {
   port: 3000,
@@ -37,7 +38,28 @@ controller.setupWebserver(env.port, (err, webserver) => {
     .createWebhookEndpoints(controller.webserver);
 });
 
+const slashCommands = {
+  '/times': (bot, message) => {
+    bot.replyPublic(message, `⏰ 「${message.text}」やるぞー！`);
+  },
+  '/christmas_times': (bot, message) => {
+    const today = moment().startOf('day');
+    const christmas = moment().month(11).date(25).startOf('day');
+    if (christmas.isBefore(today)) {
+      christmas.add(1, 'y');
+    }
+    const count = christmas.diff(today, 'days');
+    if (count === 0) {
+      bot.replyPublic(message, ':tada: メリークリスマス :gift: :santa:');
+    } else {
+      bot.replyPublic(message, `クリスマスまで後 ${count} 日です`);
+    }
+  }
+}
+
 controller.on('slash_command', (bot, message) => {
-  // message.command === '/times'
-  bot.replyPublic(message, `⏰ 「${message.text}」やるぞー！`);
+  const command = slashCommands[message.command];
+  if (command) {
+    command(bot, message);
+  }
 });
