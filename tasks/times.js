@@ -86,7 +86,8 @@ module.exports = (bot, message) => {
     bot.replyPublic(message, {
       text: 'おつかれさまー :honey_pot:',
       attachments: [{
-        text: listups
+        text: listups,
+        color: '#80EDBF'
       }]
     });
   } else if (message.text === '') {
