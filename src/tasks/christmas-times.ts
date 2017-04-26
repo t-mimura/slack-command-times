@@ -1,6 +1,12 @@
-const moment = require('moment');
+import * as moment from 'moment';
+import { TaskFunction } from './common';
 
-module.exports = (bot, message) => {
+/**
+ * クリスマスまでの日付をカウントするタスクです。
+ * @param bot bot
+ * @param message message
+ */
+export const christmasTimesTask : TaskFunction = (bot: any, message: any) => {
   const today = moment().startOf('day');
   const christmas = moment().month(11).date(25).startOf('day');
   if (christmas.isBefore(today)) {

@@ -1,12 +1,16 @@
 {
   "name": "slack-command-times",
   "version": "1.0.0",
-  "description": "",
+  "description": "this application is slack command for personal work report called times.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "FOREVER_ROOT='./.forever' forever -l times.log -a start index.js",
-    "stop": "FOREVER_ROOT='./.forever' forever stop index.js",
+    "clean": "rm -rf built/*",
+    "build": "npm run clean && npm run build.internal",
+    "build.internal": "cd src && tsc",
+    "start": "npm run build && npm run start.internal",
+    "start.internal": "FOREVER_ROOT='./.forever' forever -l times.log -a start ./built/index.js",
+    "stop": "FOREVER_ROOT='./.forever' forever stop ./built/index.js",
     "forever": "FOREVER_ROOT='./.forever' forever"
   },
   "repository": {
@@ -21,9 +25,11 @@
   },
   "homepage": "https://github.com/t-mimura/slack-command-times#readme",
   "dependencies": {
+    "@types/node": "^7.0.13",
     "botkit": "^0.4.2",
     "forever": "^0.15.3",
     "moment": "^2.17.1",
-    "nedb": "^1.8.0"
+    "nedb": "^1.8.0",
+    "typescript": "^2.2.2"
   }
 }
