@@ -1,7 +1,8 @@
-const moment = require('moment');
+import * as moment from 'moment';
 
-const DB = require('../data-access/data-access-object');
-const worksDao = new DB.WorksDAO();
+import { TaskFunction } from './common';
+import { CurrentTask, DoneTask, Work, WorksDAO } from '../data-access/data-access-object';
+const worksDao = new WorksDAO();
 
 // TODO: ユーザ情報からそのユーザのタイムゾーンを取得したい
 const TIME_ZONE = 9 * 60;
@@ -11,8 +12,10 @@ const INVALID_BACK_DATE = 'INVALID_BACK_DATE';
 /*
  * 引数の hh:mm 形式の文字列でしていされた時刻の直近のDateオブジェクトを取得します。
  * (当日まだ hh:mm が訪れていないときは前日のデータで返します。)
+ * @param hhmm 時刻形式の文字列
+ * @return Dateオブジェクト
  */
-function getLatestDate(hhmm) {
+function getLatestDate(hhmm: string): Date {
   const splited = hhmm.split(':');
   const hour = Number(splited[0]);
   const minute = Number(splited[1]);
@@ -23,17 +26,26 @@ function getLatestDate(hhmm) {
   return target.toDate();
 }
 
-// 指定した数字[分]まえのDateオブジェクトを取得します。
-function getBackDate(diffMinutes) {
-  diffMinutes = Number(diffMinutes);
-  return new Date(Date.now() - diffMinutes * 60 * 1000);
+/**
+ * 指定した数字[分]まえのDateオブジェクトを取得します。
+ * @param diffMinutes 差し引く時間(分)
+ * @return Dateオブジェクト
+ */
+function getBackDate(diffMinutes: string): Date {
+  const diffMinutesNumber = Number(diffMinutes);
+  return new Date(Date.now() - diffMinutesNumber * 60 * 1000);
 }
 
+/** DBトランザクション内の処理を表す型定義です。 */
+type TransactionalAction = (work: Work) => void;
 /*
  * work データに対するトランザクション処理を行います。
  * 指定された関数を処理する前後で work データの取得および更新を行います。
+ * @param message message
+ * @param action トランザクション内で実行する処理
+ * @return トラン座ション処理が終わったことを表すPromise
  */
-function doTransaction(message, action) {
+function doTransaction(message: any, action: TransactionalAction): Promise<never> {
   return new Promise((resolve, reject) => {
     worksDao.find(message).then(work => {
       try {
@@ -56,8 +68,10 @@ function doTransaction(message, action) {
  * 実行中のタスクがあれば現時点の時刻まで作業したとして taskに計上します。
  * backDate が指定されていれば、その時刻に作業が終わっていたとして計上します。
  * backDate が startTime より早い時間の場合は例外が発生します。
+ * @param work 現在のWorkオブジェクト
+ * @param backDate さかのぼる日付
  */
-function finishCurrentTask(work, backDate) {
+function finishCurrentTask(work: Work, backDate?: Date): void {
   const doneTask = work.currentTask;
   if (!doneTask) {
     return;
@@ -76,30 +90,42 @@ function finishCurrentTask(work, backDate) {
   work.currentTask = null;
 }
 
-// コマンドの引数の文字列から、コマンド指示の構成を解析します。
-function parseCommand(messageText) {
-  let text = messageText.trim();
+/** 入力されたコマンド文字を解析した結果を表す型定義です。 */
+type Command = { taskName: string, backDate: Date };
+
+/**
+ * コマンドの引数の文字列から、コマンド指示の構成を解析します。
+ * @param messageText ユーザが入力した文字列
+ * @return 解析結果
+ */
+function parseCommand(messageText: string): Command {
+  let taskName = messageText.trim();
   let backDate;
-  let matched = text.match(/^(.+)\s+back\s+([0-2]?[0-9]:[0-5]?[0-9])$/);
+  let matched = taskName.match(/^(.+)\s+back\s+([0-2]?[0-9]:[0-5]?[0-9])$/);
   if (matched) {
-    text = matched[1];
+    taskName = matched[1];
     backDate = getLatestDate(matched[2]);
   } else {
-    matched = text.match(/^(.+)\s+back\s+([0-9]+)$/);
+    matched = taskName.match(/^(.+)\s+back\s+([0-9]+)$/);
     if (matched) {
-      text = matched[1];
+      taskName = matched[1];
       backDate = getBackDate(matched[2]);
     }
   }
 
   return {
-    text: text,
+    taskName: taskName,
     backDate: backDate
   };
 }
 
-// コマンドの引数からタスクを追加します。
-function addTask(message, work) {
+/**
+ * コマンドの引数からタスクを追加します。
+ * @param message message
+ * @param work タスクを追加するWorkオブジェクト
+ * @return 現在のコマンド
+ */
+function addTask(message: any, work: Work): Command {
   const command = parseCommand(message.text);
   // 現在のタスクを終了
   finishCurrentTask(work, command.backDate);
@@ -108,18 +134,23 @@ function addTask(message, work) {
 
   // 新しいタスクを開始
   work.currentTask = {
-    name: command.text,
+    name: command.taskName,
     startTime: startTime
   };
   return command;
 }
 
-function listupTasksForDisplay(work) {
+/**
+ * 表示用にタスクを集計して文字列で取得します。
+ * @param work 集計したいWorkオブジェクト
+ * @return リストアップした結果の文字列
+ */
+function listupTasksForDisplay(work: Work): string {
   const taskNames = Object.keys(work.tasks);
   if (taskNames.length === 0) {
     return '今日はまだ働いてないよ :sleeping:';
   }
-  let result = [];
+  let result: string[] = [];
   let totalTime = 0;
   taskNames.forEach(taskName => {
     const task = work.tasks[taskName];
@@ -136,12 +167,21 @@ function listupTasksForDisplay(work) {
   return result.join('\n');
 }
 
-function clearTasks(work) {
+/**
+ * タスクをクリアします。
+ * @param work タスクをクリアしたいWorkオブジェクト
+ */
+function clearTasks(work: Work): void {
   work.tasks = {};
   work.currentTask = null;
 }
 
-module.exports = (bot, message) => {
+/**
+ * timesコマンドを実行する関数です。
+ * @param bot bot
+ * @param message message
+ */
+export const timesTask: TaskFunction = (bot, message) => {
   doTransaction(message, work => {
     if (message.text === 'clear') {
       clearTasks(work);
@@ -167,9 +207,9 @@ module.exports = (bot, message) => {
       try {
         const command = addTask(message, work);
         if (command.backDate) {
-          bot.replyPublic(message, `⏰ 「 ${command.text} 」やってるぞー！`);
+          bot.replyPublic(message, `⏰ 「 ${command.taskName} 」やってるぞー！`);
         } else {
-          bot.replyPublic(message, `⏰ 「 ${command.text} 」やるぞー！`);
+          bot.replyPublic(message, `⏰ 「 ${command.taskName} 」やるぞー！`);
         }
       } catch(err) {
         if (err.message === INVALID_BACK_DATE) {

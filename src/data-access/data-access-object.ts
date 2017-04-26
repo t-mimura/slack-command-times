@@ -1,10 +1,23 @@
-const Datastore = require('nedb');
+import * as Datastore from 'nedb';
 const WorksDataFilePath = './.times/db/works.db';
 
-let worksDB;
+let worksDB: Datastore;
 
-module.exports.initialize = () => {
-  return new Promise((resolve, reject) => {
+export interface DoneTask {
+  totalTime: number;
+}
+export interface CurrentTask {
+  name: string;
+  startTime: number;
+}
+export interface Work {
+  key: string;
+  tasks: { [key: string]: DoneTask };
+  currentTask: CurrentTask | undefined | null;
+}
+
+export const initialize = () => {
+  return new Promise<Datastore>((resolve, reject) => {
     worksDB = new Datastore({ filename: WorksDataFilePath });
     worksDB.loadDatabase(err => {
       worksDB.ensureIndex({ fieldName: 'key', unique: true }, err => {
@@ -14,23 +27,24 @@ module.exports.initialize = () => {
   });
 };
 
-class WorksDAO {
-  getKey(teamId, userId) {
+export class WorksDAO {
+  getKey(teamId: string, userId: string): string {
     return teamId + '/' + userId;
   }
-  find(message) {
-    return new Promise((resolve, reject) => {
+  find(message: any): Promise<Work> {
+    return new Promise<Work>((resolve, reject) => {
       const key = this.getKey(message.team_id, message.user_id);
-      worksDB.find({ key: key }, (err, result) => {
+      worksDB.find({ key: key }, (err, result: Work[]) => {
         if (err) {
           reject(err);
         } else {
           if (result.length === 0) {
-            resolve({
+            const empty: Work = {
               key: key,
               tasks: {},
               currentTask: undefined
-            });
+            };
+            resolve(empty);
           } else {
             resolve(result[0]);
           }
@@ -38,7 +52,7 @@ class WorksDAO {
       });
     });
   }
-  upsert(work) {
+  upsert(work: Work): Promise<any> {
     return new Promise((resolve, reject) => {
       worksDB.update({ key: work.key }, work, { upsert: true }, (err, numReplaced) => {
         if (err) {
@@ -50,5 +64,3 @@ class WorksDAO {
     });
   }
 }
-
-module.exports.WorksDAO = WorksDAO;

@@ -1,9 +1,15 @@
-const botkit = require('botkit');
-const moment = require('moment');
-const secrets = require('./.times/.secrets.json');
+import * as botkit from 'botkit';
+import * as path from 'path';
+
+import { TaskFunction } from './tasks/common';
+// tasks
+import { christmasTimesTask } from './tasks/christmas-times';
+import { timesTask } from './tasks/times';
+
+const secrets = require('../.times/.secrets.json');
 const env = {
   port: 3000,
-  json_file_store_path: './.times/.json_file_store/'
+  json_file_store_path: path.join(__dirname,  '../.times/.json_file_store/')
 };
 
 const scopes = ['commands'];
@@ -23,10 +29,10 @@ const controller = botkit.slackbot({
   scopes: scopes
 });
 
-const slashCommands = {
-  '/times': require('./tasks/times'),
-  '/christmas_times': require('./tasks/christmas-times')
-}
+const slashCommands : { [key: string]: TaskFunction } = {
+  '/times': timesTask,
+  '/christmas_times': christmasTimesTask
+};
 
 controller.on('slash_command', (bot, message) => {
   const command = slashCommands[message.command];
@@ -35,7 +41,7 @@ controller.on('slash_command', (bot, message) => {
   }
 });
 
-module.exports.start = () => {
+export const start = () => {
   controller.setupWebserver(env.port, (err, webserver) => {
     webserver.get('/', (req, res) => {
       res.send(addToSlackButton);
