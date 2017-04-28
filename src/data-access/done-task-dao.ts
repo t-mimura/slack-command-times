@@ -23,7 +23,7 @@ export interface DoneTask {
  * @param startTime タスクを開始した時間
  * @return キー
  */
-export function getCurrentTaskKey(
+export function getDoneTaskKey(
   teamId: string,
   userId: string,
   startTime: Date

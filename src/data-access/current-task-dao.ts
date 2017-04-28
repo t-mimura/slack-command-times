@@ -92,11 +92,11 @@ export class CurrentTaskDao {
    * @param message 検索条件になるmessageオブジェクト
    * @return 検索結果を受け取るPromise
    */
-  findLatest(message: any): Promise<CurrentTask> {
+  findLatest(message: any): Promise<CurrentTask | null> {
     return this.find<CurrentTask | null>({
       teamId: message.team_id,
       userId: message.user_id,
-      endTime: null
+      endTime: { $exists: false }
     }, (result: CurrentTask[]) => {
       if (result.length === 0) {
         return null;
@@ -117,6 +117,20 @@ export class CurrentTaskDao {
           reject(err);
         } else {
           resolve(numReplaced);
+        }
+      });
+    });
+  }
+  remove(message: any): Promise<any> {
+    return new Promise((resolve, reject) => {
+      currentTaskDB.remove({
+        teamId: message.team_id,
+        userId: message.user_id
+      }, { multi: true }, (err, numRemoved) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(numRemoved);
         }
       });
     });

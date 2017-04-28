@@ -26,7 +26,7 @@
   "homepage": "https://github.com/t-mimura/slack-command-times#readme",
   "dependencies": {
     "@types/node": "^7.0.13",
-    "botkit": "^0.4.2",
+    "botkit": "^0.5.5",
     "forever": "^0.15.3",
     "moment": "^2.17.1",
     "nedb": "^1.8.0",
