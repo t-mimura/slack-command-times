@@ -1,13 +1,21 @@
 import * as moment from 'moment';
 
 import { TaskFunction } from './common';
-import { CurrentTask, DoneTask, Work, WorksDAO } from '../data-access/data-access-object';
-const worksDao = new WorksDAO();
+import { CurrentTask, CurrentTaskDao, getCurrentTaskKey } from '../data-access/current-task-dao';
+import { DoneTask, DoneTaskDao, getDoneTaskKey } from '../data-access/done-task-dao';
 
 // TODO: ユーザ情報からそのユーザのタイムゾーンを取得したい
 const TIME_ZONE = 9 * 60;
-
+/** 不正な作業終了時間を設定した場合のエラー */
 const INVALID_BACK_DATE = 'INVALID_BACK_DATE';
+
+/**
+ * 入力されたコマンド文字を解析した結果を表す型定義です。
+ */
+type Command = {
+  taskName: string;
+  backDate: Date | undefined;
+};
 
 /*
  * 引数の hh:mm 形式の文字列でしていされた時刻の直近のDateオブジェクトを取得します。
@@ -36,63 +44,6 @@ function getBackDate(diffMinutes: string): Date {
   return new Date(Date.now() - diffMinutesNumber * 60 * 1000);
 }
 
-/** DBトランザクション内の処理を表す型定義です。 */
-type TransactionalAction = (work: Work) => void;
-/*
- * work データに対するトランザクション処理を行います。
- * 指定された関数を処理する前後で work データの取得および更新を行います。
- * @param message message
- * @param action トランザクション内で実行する処理
- * @return トラン座ション処理が終わったことを表すPromise
- */
-function doTransaction(message: any, action: TransactionalAction): Promise<never> {
-  return new Promise((resolve, reject) => {
-    worksDao.find(message).then(work => {
-      try {
-        action(work);
-      } catch(e) {
-        console.log(e);
-      }
-      worksDao.upsert(work).then(() => {
-        resolve();
-      }).catch(reason => {
-        console.log(reason);
-      });
-    }).catch(reason => {
-      console.log(reason);
-    });
-  });
-}
-
-/*
- * 実行中のタスクがあれば現時点の時刻まで作業したとして taskに計上します。
- * backDate が指定されていれば、その時刻に作業が終わっていたとして計上します。
- * backDate が startTime より早い時間の場合は例外が発生します。
- * @param work 現在のWorkオブジェクト
- * @param backDate さかのぼる日付
- */
-function finishCurrentTask(work: Work, backDate?: Date): void {
-  const doneTask = work.currentTask;
-  if (!doneTask) {
-    return;
-  }
-  const endTime = backDate ? backDate.getTime() : Date.now();
-  const diffTime = endTime - doneTask.startTime;
-  if (diffTime < 0) {
-    throw new Error(INVALID_BACK_DATE);
-  }
-  if (!work.tasks[doneTask.name]) {
-    work.tasks[doneTask.name] = {
-      totalTime: 0
-    };
-  }
-  work.tasks[doneTask.name].totalTime += diffTime;
-  work.currentTask = null;
-}
-
-/** 入力されたコマンド文字を解析した結果を表す型定義です。 */
-type Command = { taskName: string, backDate: Date };
-
 /**
  * コマンドの引数の文字列から、コマンド指示の構成を解析します。
  * @param messageText ユーザが入力した文字列
@@ -100,7 +51,7 @@ type Command = { taskName: string, backDate: Date };
  */
 function parseCommand(messageText: string): Command {
   let taskName = messageText.trim();
-  let backDate;
+  let backDate: Date | undefined = undefined;
   let matched = taskName.match(/^(.+)\s+back\s+([0-2]?[0-9]:[0-5]?[0-9])$/);
   if (matched) {
     taskName = matched[1];
@@ -112,68 +63,156 @@ function parseCommand(messageText: string): Command {
       backDate = getBackDate(matched[2]);
     }
   }
-
   return {
     taskName: taskName,
     backDate: backDate
   };
 }
 
-/**
- * コマンドの引数からタスクを追加します。
- * @param message message
- * @param work タスクを追加するWorkオブジェクト
- * @return 現在のコマンド
+/*
+ * 実行中のタスクを backDate に作業が終わっていたとして設定します。
+ * backDate が startTime より早い時間の場合は例外が発生します。
+ * @param currentTask 現在のタスクオブジェクト
+ * @param backDate さかのぼる日付
  */
-function addTask(message: any, work: Work): Command {
-  const command = parseCommand(message.text);
-  // 現在のタスクを終了
-  finishCurrentTask(work, command.backDate);
+function finishCurrentTask(currentTask: CurrentTask, backDate: Date): void {
+  const diffTime = backDate.getTime() - currentTask.startTime.getTime();
+  if (diffTime < 0) {
+    throw new Error(INVALID_BACK_DATE);
+  }
+  currentTask.endTime = backDate;
+}
 
-  const startTime = command.backDate ? command.backDate.getTime() : Date.now();
-
-  // 新しいタスクを開始
-  work.currentTask = {
-    name: command.taskName,
-    startTime: startTime
-  };
-  return command;
+/**
+ * 現在作業しているタスクの名前をレスポンスします。
+ * @param bot bot オブジェクト
+ * @param message messageオブジェクト
+ */
+function displayCurrentTask(bot: any, message: any): void {
+  const ctDao = new CurrentTaskDao();
+  ctDao.findLatest(message).then(result => {
+    if (result) {
+      bot.replyPublic(message, `いまは「 ${result.taskName} 」をやっているよー `);
+    } else {
+      bot.replyPrivate(message, ':question: そのうちヘルプがでるようになるよー');
+    }
+  });
 }
 
 /**
  * 表示用にタスクを集計して文字列で取得します。
- * @param work 集計したいWorkオブジェクト
+ * @param doneTasks 集計したい終了タスクの配列
  * @return リストアップした結果の文字列
  */
-function listupTasksForDisplay(work: Work): string {
-  const taskNames = Object.keys(work.tasks);
-  if (taskNames.length === 0) {
-    return '今日はまだ働いてないよ :sleeping:';
-  }
-  let result: string[] = [];
-  let totalTime = 0;
-  taskNames.forEach(taskName => {
-    const task = work.tasks[taskName];
-    totalTime += task.totalTime;
+function listupTasksForDisplay(doneTasks: DoneTask[]): string {
+  let wholeTotal = 0;
+  const totalPerTaskName: { [key: string]: number } = {};
+  doneTasks.forEach(doneTask => {
+    const total = totalPerTaskName[doneTask.taskName] || 0;
+    const diff = doneTask.endTime.getTime() - doneTask.startTime.getTime();
+    wholeTotal += diff;
+    totalPerTaskName[doneTask.taskName] = total + diff;
   });
+  const taskNames = Object.keys(totalPerTaskName);
+  let result: string[] = [];
   taskNames.forEach(taskName => {
-    const task = work.tasks[taskName];
     result.push([
       `"${taskName}"`,
-      moment.duration(task.totalTime, 'millisecond').humanize(),
-      '(' + Math.floor(task.totalTime / totalTime * 100) + '%)'
+      moment.duration(totalPerTaskName[taskName], 'millisecond').humanize(),
+      '(' + Math.floor(totalPerTaskName[taskName] / wholeTotal * 100) + '%)'
     ].join(' '));
   });
   return result.join('\n');
 }
 
 /**
- * タスクをクリアします。
- * @param work タスクをクリアしたいWorkオブジェクト
+ * 当日の作業を集計して終了タスクに移動します。
+ * @param bot botオブジェクト
+ * @param message messageオブジェクト
  */
-function clearTasks(work: Work): void {
-  work.tasks = {};
-  work.currentTask = null;
+function clockOut(bot: any, message: any): void {
+  const ctDao = new CurrentTaskDao();
+
+  ctDao.findAll(message).then(currentTasks => {
+    if (currentTasks.length === 0) {
+      bot.replyPrivate(message, '今日はまだ働いてないよ :sleeping:');
+      return;
+    }
+    // 当日タスクから終了タスクを作成する.
+    const doneTasks: DoneTask[] = currentTasks.map<DoneTask>(currentTask => {
+      return {
+        key: getDoneTaskKey(currentTask.teamId, currentTask.userId, currentTask.startTime),
+        startTime: currentTask.startTime,
+        endTime: currentTask.endTime || new Date(),
+        teamId: currentTask.teamId,
+        userId: currentTask.userId,
+        taskName: currentTask.taskName
+      };
+    });
+    // 当日タスクを全て削除する
+    ctDao.remove(message).then(result => {
+      // 終了タスクを追加する
+      const dtDao = new DoneTaskDao();
+      dtDao.addAll(doneTasks).then(result => {
+        const listups = listupTasksForDisplay(doneTasks);
+        bot.replyPublic(message, {
+          text: 'おつかれさまー :honey_pot:',
+          attachments: [{
+            text: listups,
+            color: '#80EDBF'
+          }]
+        });
+      });
+    });
+  });
+}
+
+/**
+ * 新規のタスクを開始します。
+ * @param bot botオブジェクト
+ * @param message messageオブジェクト
+ */
+function startTask(bot: any, message: any): void {
+  const command = parseCommand(message.text);
+  const ctDao = new CurrentTaskDao();
+  const startTime = command.backDate ? command.backDate : new Date();
+  ctDao.findLatest(message).then(current => {
+    let currentUpdatePromise: Promise<any>;
+    if (current) {
+      // 現在のタスクを終了
+      try {
+        finishCurrentTask(current, startTime);
+      } catch(e) {
+        if (e.message === INVALID_BACK_DATE) {
+          bot.replyPrivate(message, 'いまの作業の開始時刻よりも前の時間は設定できないよー');
+          return;
+        } else {
+          throw e;
+        }
+      }
+      currentUpdatePromise = ctDao.upsert(current);
+    } else {
+      currentUpdatePromise = Promise.resolve();
+    }
+    currentUpdatePromise.then(result => {
+      // 新しいタスクを開始
+      const newTask: CurrentTask = {
+        key: getCurrentTaskKey(message.team_id, message.user_id, startTime),
+        startTime: startTime,
+        endTime: undefined,
+        taskName: command.taskName,
+        teamId: message.team_id,
+        userId: message.user_id
+      };
+      ctDao.upsert(newTask).then(result => {
+        if (command.backDate) {
+          bot.replyPublic(message, `⏰ 「 ${command.taskName} 」やってるぞー！`);
+        } else {
+          bot.replyPublic(message, `⏰ 「 ${command.taskName} 」やるぞー！`);
+        }
+      });
+    });
+  });
 }
 
 /**
@@ -182,44 +221,11 @@ function clearTasks(work: Work): void {
  * @param message message
  */
 export const timesTask: TaskFunction = (bot, message) => {
-  doTransaction(message, work => {
-    if (message.text === 'clear') {
-      clearTasks(work);
-      bot.replyPublic(message, 'なかったことにしたよ');
-    } else if (message.text === 'clock out') {
-      finishCurrentTask(work);
-      const listups = listupTasksForDisplay(work);
-      clearTasks(work);
-      bot.replyPublic(message, {
-        text: 'おつかれさまー :honey_pot:',
-        attachments: [{
-          text: listups,
-          color: '#80EDBF'
-        }]
-      });
-    } else if (message.text === '') {
-      if (work && work.currentTask) {
-        bot.replyPublic(message, `いまは「 ${work.currentTask.name} 」をやっているよー `);
-      } else {
-        bot.replyPrivate(message, ':question: そのうちヘルプがでるようになるよー');
-      }
-    } else {
-      try {
-        const command = addTask(message, work);
-        if (command.backDate) {
-          bot.replyPublic(message, `⏰ 「 ${command.taskName} 」やってるぞー！`);
-        } else {
-          bot.replyPublic(message, `⏰ 「 ${command.taskName} 」やるぞー！`);
-        }
-      } catch(err) {
-        if (err.message === INVALID_BACK_DATE) {
-          bot.replyPublic(message, 'いまの作業の開始時刻よりも前の時間は設定できないよー');
-        } else {
-          throw err;
-        }
-      }
-    }
-  }).catch(reason => {
-    console.log(reason);
-  });
+  if (message.text === '') {
+    displayCurrentTask(bot, message);
+  } else if (message.text === 'clock out') {
+    clockOut(bot, message);
+  }else {
+    startTask(bot, message);
+  }
 };
