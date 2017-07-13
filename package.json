@@ -28,6 +28,7 @@
     "@types/node": "^7.0.13",
     "botkit": "^0.5.5",
     "forever": "^0.15.3",
+    "log4js": "^2.0.1",
     "moment": "^2.17.1",
     "nedb": "^1.8.0",
     "typescript": "^2.2.2"

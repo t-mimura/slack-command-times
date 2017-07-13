@@ -1,4 +1,6 @@
 import * as Datastore from 'nedb';
+import { logger } from '../utils/logger';
+
 const DbFilePath = './.times/db/current-task.db';
 
 /** DBへのインスタンス */
@@ -65,11 +67,16 @@ export class CurrentTaskDao {
   {
     return new Promise<T>((resolve, reject) => {
       currentTaskDB.find(searchCondition, (err, result: CurrentTask[]) => {
-        if (err) {
-          reject(err);
-        } else {
-          const resolvedValue = doPostProcess(result);
-          resolve(resolvedValue);
+        try {
+          if (err) {
+            logger.error(err);
+            reject(err);
+          } else {
+            const resolvedValue = doPostProcess(result);
+            resolve(resolvedValue);
+          }
+        } catch(ex) {
+          logger.exception(ex);
         }
       });
     });
@@ -113,24 +120,38 @@ export class CurrentTaskDao {
   upsert(currentTask: CurrentTask): Promise<any> {
     return new Promise((resolve, reject) => {
       currentTaskDB.update({ key: currentTask.key }, currentTask, { upsert: true }, (err, numReplaced) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(numReplaced);
+        try {
+          if (err) {
+            logger.error(err);
+            reject(err);
+          } else {
+            resolve(numReplaced);
+          }
+        } catch(ex) {
+          logger.exception(ex);
         }
       });
     });
   }
+  /**
+   * ユーザ単位で一括で当日のタスクを削除します。
+   * @param message 削除するユーザのmessageオブジェクト
+   */
   remove(message: any): Promise<any> {
     return new Promise((resolve, reject) => {
       currentTaskDB.remove({
         teamId: message.team_id,
         userId: message.user_id
       }, { multi: true }, (err, numRemoved) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(numRemoved);
+        try {
+          if (err) {
+            logger.error(err);
+            reject(err);
+          } else {
+            resolve(numRemoved);
+          }
+        } catch(ex) {
+          logger.exception(ex);
         }
       });
     });

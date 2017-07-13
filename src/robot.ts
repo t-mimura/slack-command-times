@@ -1,6 +1,7 @@
 import * as botkit from 'botkit';
 import * as path from 'path';
 
+import { logger } from './utils/logger';
 import { TaskFunction } from './tasks/common';
 // tasks
 import { christmasTimesTask } from './tasks/christmas-times';
@@ -35,9 +36,14 @@ const slashCommands : { [key: string]: TaskFunction } = {
 };
 
 controller.on('slash_command', (bot, message) => {
-  const command = slashCommands[message.command];
-  if (command) {
-    command(bot, message);
+  try {
+    logger.access(message);
+    const command = slashCommands[message.command];
+    if (command) {
+      command(bot, message);
+    }
+  } catch(ex) {
+    logger.exception(ex);
   }
 });
 

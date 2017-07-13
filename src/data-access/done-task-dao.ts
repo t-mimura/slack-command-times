@@ -1,4 +1,5 @@
 import * as Datastore from 'nedb';
+import { logger } from '../utils/logger';
 const DbFilePath = './.times/db/done-task.db';
 
 /** DBへのインスタンス */
@@ -64,11 +65,16 @@ export class DoneTaskDao {
   {
     return new Promise<T>((resolve, reject) => {
       doneTaskDB.find(searchCondition, (err, result: DoneTask[]) => {
-        if (err) {
-          reject(err);
-        } else {
-          const resolvedValue = doPostProcess(result);
-          resolve(resolvedValue);
+        try {
+          if (err) {
+            logger.error(err);
+            reject(err);
+          } else {
+            const resolvedValue = doPostProcess(result);
+            resolve(resolvedValue);
+          }
+        } catch(ex) {
+          logger.exception(ex);
         }
       });
     });
@@ -109,10 +115,15 @@ export class DoneTaskDao {
   addAll(doneTasks: DoneTask[]) {
     return new Promise((resolve, reject) => {
       doneTaskDB.insert(doneTasks, (err, newDocs) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(newDocs);
+        try {
+          if (err) {
+            logger.error(err);
+            reject(err);
+          } else {
+            resolve(newDocs);
+          }
+        } catch(ex) {
+          logger.exception(ex);
         }
       });
     });
