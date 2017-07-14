@@ -13,7 +13,7 @@ const env = {
   json_file_store_path: path.join(__dirname,  '../.times/.json_file_store/')
 };
 
-const scopes = ['commands'];
+const scopes = ['commands', 'users.profile:write'];
 const addToSlackButton = `
   <a href="https://slack.com/oauth/authorize?scope=${scopes.join(',')}&client_id=${secrets.clientId}">
     <img alt="Add to Slack" height="40" width="139"
@@ -36,6 +36,7 @@ const slashCommands : { [key: string]: TaskFunction } = {
 };
 
 controller.on('slash_command', (bot, message) => {
+  logger.trace('on_slash_command', message);
   try {
     logger.access(message);
     const command = slashCommands[message.command];

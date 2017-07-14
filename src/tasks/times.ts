@@ -1,5 +1,6 @@
 import * as moment from 'moment';
 
+import { logger } from '../utils/logger';
 import { TaskFunction } from './common';
 import { CurrentTask, CurrentTaskDao, getCurrentTaskKey } from '../data-access/current-task-dao';
 import { DoneTask, DoneTaskDao, getDoneTaskKey } from '../data-access/done-task-dao';
@@ -168,6 +169,69 @@ function clockOut(bot: any, message: any): void {
 }
 
 /**
+ * もしコマンドテキストが形式にそっていれば、ユーザのステータスを更新します。
+ * @param bot botオブジェクト
+ * @param message メッセージオブジェクト
+ * @param text コマンドテキスト
+ */
+function changeStatus(bot: any, message: any, text: string): void {
+  if (!text) {
+    return;
+  }
+  // text がフォーマットに沿っているかどうか
+  const matched = text.match(/^(:[^:\s]+:)\s+([^\s].+)$/);
+  if (!matched) {
+    return;
+  }
+  const status_emoji = matched[1];
+  const status_text = matched[2];
+  // accessTokenを取得する
+  getAccessToken(bot, message.user_id, accessToken => {
+    if (!accessToken) {
+      logger.trace('changeStatus', `user(${message.user_id})'s access token was not existed.`)
+      return;
+    }
+    // users.profile.set APIを発行
+    const options = {
+      token: accessToken,
+      user: message.user_id,
+      profile: JSON.stringify({ status_emoji, status_text })
+    };
+    bot.api.users.profile.set(options, (err, result) => {
+      if (err) {
+        logger.error(['changeStatus: api call', err]);
+      }
+      logger.trace('onCallbackInChangeStatus', result);
+    });
+  });
+}
+
+/**
+ * チームのアクセストークンを取得します。
+ * @param bot botオブジェクト
+ * @param userId アクセストークンを取得したいユーザID
+ * @param cb コールバック関数
+ */
+function getAccessToken(bot: any, userId: string, cb: (accessToken: string | undefined) => void ): void {
+  bot.botkit.storage.users.get(userId, (err, user) => {
+    if (err) {
+      logger.error(['getAccessToken', 'userid:' + userId, err]);
+      cb(undefined);
+      return;
+    }
+    try {
+      if (user) {
+        cb(user.access_token);
+      } else {
+        cb(undefined);
+      }
+    } catch(ex) {
+      logger.exception(ex);
+    }
+  });
+}
+
+/**
  * 新規のタスクを開始します。
  * @param bot botオブジェクト
  * @param message messageオブジェクト
@@ -210,6 +274,7 @@ function startTask(bot: any, message: any): void {
         } else {
           bot.replyPublic(message, `⏰ 「 ${command.taskName} 」やるぞー！`);
         }
+        changeStatus(bot, message, command.taskName);
       });
     });
   });
