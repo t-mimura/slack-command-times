@@ -1,0 +1,18 @@
+{
+  "appenders": {
+    "normal": {
+      "type": "file",
+      "filename": ".times/times.log",
+      "maxLogSize": 10485760,
+      "compress": true
+    }
+  },
+  "categories": {
+    "default": {
+      "appenders": [
+        "normal"
+      ],
+      "level": "debug"
+    }
+  }
+}

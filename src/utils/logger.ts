@@ -68,7 +68,7 @@ export const logger = {
     if (!this.isAccessEnabeled() || !message) {
       return;
     }
-    accessLogger.debug(`inputed: "${message.text}"\tuser: ${message.user_id}\ttream: ${message.team_id}`);
+    accessLogger.debug(`command: "${message.command}"\tinputed: "${message.text}"\tuser: ${message.user_id}\ttream: ${message.team_id}`);
   },
   /**
    * 例外のログを出力します。
@@ -82,7 +82,7 @@ export const logger = {
    * @param detail エラー詳細
    */
   error: function(detail: any): void {
-    exceptionLogger.errro(detail);
+    exceptionLogger.error(detail);
   }
 };
 
