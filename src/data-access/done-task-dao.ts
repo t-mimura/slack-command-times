@@ -1,35 +1,23 @@
-import * as Datastore from 'nedb';
+import * as Datastore from '@google-cloud/datastore';
 import { logger } from '../utils/logger';
-const DbFilePath = './.times/db/done-task.db';
+import DatastoreSetting from './common-setting';
 
-/** DBへのインスタンス */
-let doneTaskDB: Datastore;
+const KIND = DatastoreSetting.KIND.DONE_TASK;
+
+const datastore = Datastore({
+  keyFilename: DatastoreSetting.GCOUND_API_KEY_FILE_PATH
+});
 
 /**
  * clock out済の過去のタスクを表すインターフェースです。
  */
 export interface DoneTask {
-  key: string;
+  id?: string;
   teamId: string;
   userId: string;
   startTime: Date;
   endTime: Date;
   taskName: string;
-}
-
-/**
- * 済タスクのためのキーを取得します。
- * @param teamId SlackのチームID
- * @param userId SlackのユーザID
- * @param startTime タスクを開始した時間
- * @return キー
- */
-export function getDoneTaskKey(
-  teamId: string,
-  userId: string,
-  startTime: Date
-): string {
-  return teamId + '\t' + userId + '\t' +  startTime.toJSON();
 }
 
 /**
@@ -39,93 +27,91 @@ export function getDoneTaskKey(
  */
 export const initialize = () => {
   return new Promise<Datastore>((resolve, reject) => {
-    doneTaskDB = new Datastore({ filename: DbFilePath });
-    doneTaskDB.loadDatabase(err => {
-      doneTaskDB.ensureIndex({ fieldName: 'key', unique: true }, err => {
-        resolve(doneTaskDB);
-      });
-    });
+    // いまは非同期にする必要はないが何か特殊処理が増えたときのためにこのままにしておく
+    resolve(datastore);
   });
 };
+
+/**
+ * Promiseでエラー発生時の処理を行います。
+ *
+ * @param reason エラーの原因
+ */
+function doErrorProcess(reason: any): any {
+  if (reason instanceof Error) {
+    logger.exception(reason);
+  } else {
+    logger.error(reason);
+  }
+  return reason;
+}
 
 /**
  * 済タスクを取り扱うDataAccessObjectクラスです。
  */
 export class DoneTaskDao {
   /**
-   * DoneTaskを任意の検索条件で取得します。
-   * @param searchCondition 検索条件
-   * @param doPostProcess 取得したデータを加工するための関数
-   * @return 検索結果を受け取るPromise
-   * @type T
-   */
-  private find<T>(
-    searchCondition: { [key: string]: any},
-    doPostProcess: (result: DoneTask[]) => T)
-  {
-    return new Promise<T>((resolve, reject) => {
-      doneTaskDB.find(searchCondition, (err, result: DoneTask[]) => {
-        try {
-          if (err) {
-            logger.error(err);
-            reject(err);
-          } else {
-            const resolvedValue = doPostProcess(result);
-            resolve(resolvedValue);
-          }
-        } catch(ex) {
-          logger.exception(ex);
-        }
-      });
-    });
-  }
-  /**
    * 該当ユーザのDoneTaskを全て検索します。
    * @param message 該当ユーザを紐付けるためのmessageオブジェクト
    * @return 検索結果を受け取るPromise
    */
   findAll(message: any): Promise<DoneTask[]> {
-    return this.find<DoneTask[]>({
-      teamId: message.team_id,
-      userId: message.user_id
-    }, (result: DoneTask[]) => {
-      return result;
-    });
+    const query = datastore.createQuery(KIND)
+      .filter('teamId', message.team_id)
+      .filter('userId', message.user_id);
+    return datastore.runQuery(query).then(results => {
+      if (results.length === 0) {
+        return [];
+      } else {
+        return results[0];
+      }
+    }).catch(doErrorProcess);
   }
+
   /**
    * 該当ユーザの DoneTask を期間を指定して検索します。
    * @param message 検索条件になるmessageオブジェクト
-   * @param after
+   * @param after この日付より後のデータを取得します。
    * @return 検索結果を受け取るPromise
    */
   findAfter(message: any, after: Date): Promise<DoneTask[]> {
-    return this.find<DoneTask[]>({
-      teamId: message.team_id,
-      userId: message.user_id,
-      startTime: { $gt: after }
-    }, (result: DoneTask[]) => {
-      return result;
-    });
+    const query = datastore.createQuery(KIND)
+      .filter('teamId', message.team_id)
+      .filter('userId', message.user_id)
+      .filter('startTime', '>', after);
+    return datastore.runQuery(query).then(results => {
+      if (results.length === 0) {
+        return [];
+      } else {
+        return results[0];
+      }
+    }).catch(doErrorProcess);
   }
+
   /**
    * 済タスクを一括で追加します。
    * @param doneTasks 追加する 済タスク
    * @return 実行結果を受け取るPromise
    */
   addAll(doneTasks: DoneTask[]) {
-    return new Promise((resolve, reject) => {
-      doneTaskDB.insert(doneTasks, (err, newDocs) => {
-        try {
-          if (err) {
-            logger.error(err);
-            reject(err);
-          } else {
-            resolve(newDocs);
-          }
-        } catch(ex) {
-          logger.exception(ex);
-        }
+    const transaction = datastore.transaction();
+    return transaction.run().then(() => {
+      const incompleteKey = datastore.key([KIND]);
+      return transaction.allocateIds(incompleteKey, doneTasks.length).then(results => {
+        return results[0];
       });
-    });
+    }).then(keys => {
+      const entities: { key: any, data: any }[] = [];
+      doneTasks.forEach((data, i) => {
+        const key = keys[i];
+        data.id = key.id;
+        entities.push({ key, data });
+      });
+      transaction.upsert(entities);
+      return transaction.commit();
+    }).catch(reason => {
+      transaction.rollback();
+      return reason;
+    }).catch(doErrorProcess);
   }
 }
