@@ -1,8 +1,8 @@
 import * as moment from 'moment';
 
 import { TaskFunction } from './common';
-import { CurrentTask, CurrentTaskDao, getCurrentTaskKey } from '../data-access/current-task-dao';
-import { DoneTask, DoneTaskDao, getDoneTaskKey } from '../data-access/done-task-dao';
+import { CurrentTask, CurrentTaskDao } from '../data-access/current-task-dao';
+import { DoneTask, DoneTaskDao } from '../data-access/done-task-dao';
 
 // TODO: ユーザ情報からそのユーザのタイムゾーンを取得したい
 const TIME_ZONE = 9 * 60;
@@ -141,7 +141,6 @@ function clockOut(bot: any, message: any): void {
     // 当日タスクから終了タスクを作成する.
     const doneTasks: DoneTask[] = currentTasks.map<DoneTask>(currentTask => {
       return {
-        key: getDoneTaskKey(currentTask.teamId, currentTask.userId, currentTask.startTime),
         startTime: currentTask.startTime,
         endTime: currentTask.endTime || new Date(),
         teamId: currentTask.teamId,
@@ -197,7 +196,6 @@ function startTask(bot: any, message: any): void {
     currentUpdatePromise.then(result => {
       // 新しいタスクを開始
       const newTask: CurrentTask = {
-        key: getCurrentTaskKey(message.team_id, message.user_id, startTime),
         startTime: startTime,
         endTime: undefined,
         taskName: command.taskName,
