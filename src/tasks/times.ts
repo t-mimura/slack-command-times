@@ -9,6 +9,8 @@ const TIME_ZONE = 9 * 60;
 /** 不正な作業終了時間を設定した場合のエラー */
 const INVALID_BACK_DATE = 'INVALID_BACK_DATE';
 
+const NO_RESPONSE_TEXT = ' '; // スペースのみだと発言として反映されないので、それを利用する。（空文字の場合エラーとなる）
+
 /**
  * 入力されたコマンド文字を解析した結果を表す型定義です。
  */
@@ -92,7 +94,7 @@ function displayCurrentTask(bot: any, message: any): void {
   const ctDao = new CurrentTaskDao();
   ctDao.findLatest(message).then(result => {
     if (result) {
-      bot.replyPublic(message, `いまは「 ${result.taskName} 」をやっているよー `);
+      bot.replyPrivate(message, `いまは「 ${result.taskName} 」をやっているよー `);
     } else {
       bot.replyPrivate(message, ':question: そのうちヘルプがでるようになるよー');
     }
@@ -154,8 +156,9 @@ function clockOut(bot: any, message: any): void {
       const dtDao = new DoneTaskDao();
       dtDao.addAll(doneTasks).then(result => {
         const listups = listupTasksForDisplay(doneTasks);
-        bot.replyPublic(message, {
-          text: 'おつかれさまー :honey_pot:',
+        bot.replyPrivate(message, NO_RESPONSE_TEXT);
+        bot.replyPublicDelayed(message, {
+          text: `<@${message.user_id}>さん、おつかれさまー :honey_pot:`,
           attachments: [{
             text: listups,
             color: '#80EDBF'
@@ -203,10 +206,11 @@ function startTask(bot: any, message: any): void {
         userId: message.user_id
       };
       ctDao.upsert(newTask).then(result => {
+        bot.replyPrivate(message, NO_RESPONSE_TEXT);
         if (command.backDate) {
-          bot.replyPublic(message, `⏰ 「 ${command.taskName} 」やってるぞー！`);
+          bot.replyPublicDelayed(message, `⏰ <@${message.user_id}>さん: 「 ${command.taskName} 」やってるぞー！`);
         } else {
-          bot.replyPublic(message, `⏰ 「 ${command.taskName} 」やるぞー！`);
+          bot.replyPublicDelayed(message, `⏰ <@${message.user_id}>さん: 「 ${command.taskName} 」やるぞー！`);
         }
       });
     });
