@@ -9,7 +9,7 @@ const TIME_ZONE = 9 * 60;
 /** 不正な作業終了時間を設定した場合のエラー */
 const INVALID_BACK_DATE = 'INVALID_BACK_DATE';
 
-const NO_RESPONSE_TEXT = ' '; // スペースのみだと発言として反映されないので、それを利用する。（空文字の場合エラーとなる）
+const OK_RESPONSE_TEXT = 'OK!';
 
 /**
  * 入力されたコマンド文字を解析した結果を表す型定義です。
@@ -156,7 +156,7 @@ function clockOut(bot: any, message: any): void {
       const dtDao = new DoneTaskDao();
       dtDao.addAll(doneTasks).then(result => {
         const listups = listupTasksForDisplay(doneTasks);
-        bot.replyPrivate(message, NO_RESPONSE_TEXT);
+        bot.replyPrivate(message, OK_RESPONSE_TEXT);
         bot.replyPublicDelayed(message, {
           text: `<@${message.user_id}>さん、おつかれさまー :honey_pot:`,
           attachments: [{
@@ -206,7 +206,7 @@ function startTask(bot: any, message: any): void {
         userId: message.user_id
       };
       ctDao.upsert(newTask).then(result => {
-        bot.replyPrivate(message, NO_RESPONSE_TEXT);
+        bot.replyPrivate(message, OK_RESPONSE_TEXT);
         if (command.backDate) {
           bot.replyPublicDelayed(message, `⏰ <@${message.user_id}>さん: 「 ${command.taskName} 」やってるぞー！`);
         } else {
