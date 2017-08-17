@@ -207,11 +207,9 @@ function startTask(bot: any, message: any): void {
       };
       ctDao.upsert(newTask).then(result => {
         bot.replyPrivate(message, OK_RESPONSE_TEXT);
-        if (command.backDate) {
-          bot.replyPublicDelayed(message, `⏰ <@${message.user_id}>さん: 「 ${command.taskName} 」やってるぞー！`);
-        } else {
-          bot.replyPublicDelayed(message, `⏰ <@${message.user_id}>さん: 「 ${command.taskName} 」やるぞー！`);
-        }
+        const startTimeString = moment(newTask.startTime.getTime()).format('HH:mm');
+        const replySuffix = command.backDate ? 'やってるぞー！' : 'やるぞー！';
+        bot.replyPublicDelayed(message, `⏰ (${startTimeString}) <@${message.user_id}>さん: 「 ${command.taskName} 」${replySuffix}`);
       });
     });
   });
