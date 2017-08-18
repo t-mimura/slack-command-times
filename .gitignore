@@ -41,6 +41,7 @@ jspm_packages
 # Optional REPL history
 .node_repl_history
 
+.times/times.config.json
 .times/.secrets.json
 .times/.json_file_store
 .times/log4js.config.json

@@ -1,8 +1,11 @@
+import * as path from 'path';
 import * as moment from 'moment';
 
 import { TaskFunction } from './common';
 import { CurrentTask, CurrentTaskDao } from '../data-access/current-task-dao';
 import { DoneTask, DoneTaskDao } from '../data-access/done-task-dao';
+
+const timesConfig = require('../../.times/times.config.json');
 
 // TODO: ユーザ情報からそのユーザのタイムゾーンを取得したい
 const TIME_ZONE = 9 * 60;
@@ -93,11 +96,25 @@ function finishCurrentTask(currentTask: CurrentTask, backDate: Date): void {
 function displayCurrentTask(bot: any, message: any): void {
   const ctDao = new CurrentTaskDao();
   ctDao.findLatest(message).then(result => {
+    let currentTaskText: string = '';
     if (result) {
-      bot.replyPrivate(message, `いまは「 ${result.taskName} 」をやっているよー `);
+      currentTaskText = `いまは「 ${result.taskName} 」をやっているよー `;
     } else {
-      bot.replyPrivate(message, ':question: そのうちヘルプがでるようになるよー');
+      currentTaskText = 'いまはなにもしていないよー';
     }
+    const webPageUrl = path.join(timesConfig.host, timesConfig.baseUrl, 'times/');
+    const helpPageUrl = path.join(timesConfig.host, timesConfig.baseUrl, 'times/help/');
+    bot.replyPrivate(message, {
+      text: currentTaskText,
+      attachments: [{
+        fallback: `help page: <${helpPageUrl}>`,
+        author_name: 'times',
+        author_link: webPageUrl,
+        title: 'help page',
+        title_link: helpPageUrl,
+        color: timesConfig.attachmentsColor
+      }]
+    });
   });
 }
 
@@ -161,7 +178,7 @@ function clockOut(bot: any, message: any): void {
           text: `<@${message.user_id}>さん、おつかれさまー :honey_pot:`,
           attachments: [{
             text: listups,
-            color: '#80EDBF'
+            color: timesConfig.attachmentsColor
           }]
         });
       });

@@ -44,7 +44,7 @@ function doErrorProcess(reason: any): any {
   } else {
     logger.error(reason);
   }
-  return reason;
+  throw reason;
 }
 
 /**
@@ -109,7 +109,7 @@ export class CurrentTaskDao {
       return transaction.commit();
     }).catch(reason => {
       transaction.rollback();
-      return reason;
+      throw reason;
     }).catch(doErrorProcess);
   }
 
@@ -132,7 +132,7 @@ export class CurrentTaskDao {
       return transaction.commit();
     }).catch(reason => {
       transaction.rollback();
-      return reason;
+      throw reason;
     }).catch(doErrorProcess);
   }
 }
