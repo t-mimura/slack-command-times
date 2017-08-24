@@ -1,5 +1,6 @@
 import * as botkit from 'botkit';
 import * as path from 'path';
+import * as express from 'express';
 
 import { logger } from './utils/logger';
 import { TaskFunction } from './tasks/common';
@@ -8,18 +9,13 @@ import { christmasTimesTask } from './tasks/christmas-times';
 import { timesTask } from './tasks/times';
 
 const secrets = require('../.times/.secrets.json');
+const timesConfig = require('../.times/times.config.json');
 const env = {
   port: 3000,
   json_file_store_path: path.join(__dirname,  '../.times/.json_file_store/')
 };
 
 const scopes = ['commands'];
-const addToSlackButton = `
-  <a href="https://slack.com/oauth/authorize?scope=${scopes.join(',')}&client_id=${secrets.clientId}">
-    <img alt="Add to Slack" height="40" width="139"
-      src="https://platform.slack-edge.com/img/add_to_slack.png"
-      srcset="https://platform.slack-edge.com/img/add_to_slack.png 1x, https://platform.slack-edge.com/img/add_to_slack@2x.png 2x" />
-  </a>`;
 
 const controller = botkit.slackbot({
   debug: false,
@@ -49,9 +45,18 @@ controller.on('slash_command', (bot, message) => {
 
 export const start = () => {
   controller.setupWebserver(env.port, (err, webserver) => {
-    webserver.get('/', (req, res) => {
-      res.send(addToSlackButton);
-    });
+    const logErrors = (err, req, res, next) => {
+      logger.error(err.stack);
+      next(err);
+    }
+    webserver.set('views', path.join(__dirname, 'views'));
+    webserver.set('view engine', 'pug');
+
+    webserver.use(express.static(path.join(__dirname, 'public')));
+    webserver.use('/times', require('./routes/times/index')(timesConfig.baseUrl, scopes.join(','), secrets.clientId));
+    webserver.use('/times/help', require('./routes/times/help')(timesConfig.baseUrl));
+    webserver.use(logErrors);
+
     controller
       .createOauthEndpoints(controller.webserver, (err, req, res) => {
         if (err) {

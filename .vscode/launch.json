@@ -10,6 +10,7 @@
       "name": "Launch Program",
       "program": "${workspaceRoot}/src/index.ts",
       "sourceMaps": true,
+      "cwd": "${workspaceRoot}",
       "outFiles": [
         "${workspaceRoot}/built/**/*.js"
       ],

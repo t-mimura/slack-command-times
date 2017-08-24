@@ -6,10 +6,11 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "clean": "rm -rf built/*",
-    "build": "npm run clean && npm run build.internal",
-    "build.internal": "cd src && tsc",
+    "build": "npm run clean && npm run build.compile && npm run build.copy",
+    "build.compile": "cd src && tsc",
+    "build.copy": "cp -rf src/views ./built/views && cp -rf public ./built/public",
     "start": "npm run build && npm run start.internal",
-    "start.internal": "FOREVER_ROOT='./.forever' forever -l times.log -a start ./built/index.js",
+    "start.internal": "FOREVER_ROOT='./.forever' NODE_ENV=production forever -l times.log -a start ./built/index.js",
     "stop": "FOREVER_ROOT='./.forever' forever stop ./built/index.js",
     "forever": "FOREVER_ROOT='./.forever' forever"
   },
@@ -31,6 +32,7 @@
     "forever": "^0.15.3",
     "log4js": "^2.0.1",
     "moment": "^2.17.1",
+    "pug": "^2.0.0-rc.3",
     "typescript": "^2.2.2"
   }
 }
