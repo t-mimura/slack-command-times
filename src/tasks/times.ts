@@ -4,6 +4,7 @@ import * as moment from 'moment';
 import { TaskFunction } from './common';
 import { CurrentTask, CurrentTaskDao } from '../data-access/current-task-dao';
 import { DoneTask, DoneTaskDao } from '../data-access/done-task-dao';
+import { InteractiveContext, InteractiveContextManager } from '../utils/interactive-message-utils';
 
 const timesConfig = require('../../.times/times.config.json');
 
@@ -104,12 +105,20 @@ function displayCurrentTask(bot: any, message: any): void {
     }
     const webPageUrl = path.join(timesConfig.host, timesConfig.baseUrl, 'times/');
     const helpPageUrl = path.join(timesConfig.host, timesConfig.baseUrl, 'times/help/');
+    const context = InteractiveContextManager.getInstance().createContext('times command', message);
+    const reportPageUrl = path.join(timesConfig.host, timesConfig.baseUrl, 'times/report', context.id, '');
     bot.replyPrivate(message, {
       text: currentTaskText,
       attachments: [{
-        fallback: `help page: <${helpPageUrl}>`,
+        fallback: `report page: <${reportPageUrl}>`,
         author_name: 'times',
         author_link: webPageUrl,
+        title: 'report page',
+        title_link: reportPageUrl,
+        text: `This URL is valid until ${InteractiveContextManager.expirationPeriodHours} hours.`,
+        color: timesConfig.attachmentsColor
+      }, {
+        fallback: `help page: <${helpPageUrl}>`,
         title: 'help page',
         title_link: helpPageUrl,
         color: timesConfig.attachmentsColor

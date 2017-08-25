@@ -1,0 +1,15 @@
+if summarizedData.length === 0
+  p nothing
+else
+  table.summarized
+    thead
+      tr
+        th.task-name
+        th.total-time total time
+        th.rate rate
+    tbody
+      each summarized in summarizedData
+        tr
+          td.task-name= summarized.taskName
+          td.total-time= summarized.totalTime
+          td.rate= `${summarized.rate}%`
