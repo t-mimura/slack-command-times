@@ -54,6 +54,7 @@ export const start = () => {
 
     webserver.use(express.static(path.join(__dirname, 'public')));
     webserver.use('/times', require('./routes/times/index')(timesConfig.baseUrl, scopes.join(','), secrets.clientId));
+    webserver.use('/times/report', require('./routes/times/report')(timesConfig.baseUrl));
     webserver.use('/times/help', require('./routes/times/help')(timesConfig.baseUrl));
     webserver.use(logErrors);
 

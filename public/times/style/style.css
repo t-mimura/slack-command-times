@@ -1,0 +1,40 @@
+/* 全体適応 */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Noto Sans Japanese", "ヒラギノ角ゴ ProN W3", Hiragino Kaku Gothic ProN, Arial, Meiryo, sans-serif;
+}
+
+.content {
+  padding: 0 20px;
+}
+
+/* 集計用 */
+
+/* テーブル */
+table.summarized {
+  width: 50%;
+  border-collapse: collapse;
+  line-height: 1.5;
+}
+
+.summarized td, .summarized th {
+  padding: 5px 10px;
+  border: 1px solid #cccccc;
+}
+
+.summarized thead th {
+  background: #dcdcd1;
+  border-bottom: 2px solid #80EDBF;
+}
+
+.summarized tr:nth-child(even) td {
+  background: #efefef;
+}
+
+.summarized td.total-time {
+  width: 180px;
+}
+
+.summarized td.rate {
+  width: 60px;
+  text-align: right;
+}

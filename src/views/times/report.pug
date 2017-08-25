@@ -1,0 +1,19 @@
+extends layout
+
+block content
+  if errorMessage
+    p= errorMessage
+  else
+    - var summarizedData = [];
+
+    H1 The last a week
+    - summarizedData = lastWeek;
+    include report-table.pug
+
+    H1 The last half a year
+    - summarizedData = lastHalfYear;
+    include report-table.pug
+
+    H1 The last a Year
+    - summarizedData = lastYear;
+    include report-table.pug
