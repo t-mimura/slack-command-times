@@ -9,9 +9,29 @@ body {
 
 /* 集計用 */
 
+/* 円グラフ */
+div.pie-chart {
+  height: 300px;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+span#tooltip {
+  position: absolute;
+  z-index: 10;
+  visibility: hidden;
+  padding: 0 5px;
+  border: 1px solid #000;
+  border-radius: 3px;
+  background-color: #333;
+  color: #fff;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
 /* テーブル */
 table.summarized {
-  width: 50%;
+  width: 100%;
   border-collapse: collapse;
   line-height: 1.5;
 }

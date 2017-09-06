@@ -54,7 +54,7 @@ function resetTime(date: Date): Date {
  */
 type SummarizedDoneTask = {
   taskName: string;
-  totalTime: string;
+  totalTime: number;
   rate: number;
 }
 
@@ -83,10 +83,11 @@ function summarize(doneTasks: DoneTask[], startDate: Date): SummarizedDoneTask[]
   let result: SummarizedDoneTask[] = [];
   const taskNames = Object.keys(totalPerTaskName);
   taskNames.forEach(taskName => {
+    const totalTime = totalPerTaskName[taskName];
     result.push({
       taskName: taskName,
-      totalTime: moment.duration(totalPerTaskName[taskName], 'millisecond').humanize(),
-      rate: Math.floor(totalPerTaskName[taskName] / wholeTotal * 100)
+      totalTime: totalTime,
+      rate: Math.floor(totalTime / wholeTotal * 100)
     });
   });
   // taskNameでソート
