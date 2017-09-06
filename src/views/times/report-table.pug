@@ -12,10 +12,11 @@ else
       each summarized in summarizedData
         tr
           td.task-name= summarized.taskName
-          if summarized.totalTime < oneHourInMillisecond
+          - var totalTimeInHour = Math.floor(summarized.totalTime / oneHourInMillisecond);
+          if totalTimeInHour < 1
             td.total-time < 1 hour
           else
-            td.total-time= `${summarized.totalTime} hour(s)`
+            td.total-time= `${totalTimeInHour} hour(s)`
           if summarized.rate < 1
             td.rate < 1%
           else

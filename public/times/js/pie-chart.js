@@ -9,6 +9,7 @@ function drawPieChart(dataset, selectorText) {
   /* -------------------------------定数/変数定義---------------------------------------------*/
   var graphSize = 300;
   var legendWidth = 400;
+  var graphMargin = 20;
   var height = graphSize;
   var width = graphSize + legendWidth;
   var radius = (graphSize - 10) / 2;
@@ -86,10 +87,10 @@ function drawPieChart(dataset, selectorText) {
   /* -------------------------------D3凡例処理---------------------------------------------*/
   var legendPath = d3.legendColor()
       .scale(colorScale)
-      .labelWrap(30)
+      .labelWrap(width - graphSize - graphMargin)
       .title('LEGEND');
   var legendGroup = svg.append('g')
       .attr('class', 'legendLinear')
-      .attr('transform', 'translate(' + (graphSize + 20) + ', 20)')
+      .attr('transform', 'translate(' + (graphSize + graphMargin) + ', 20)')
       .call(legendPath);
 }
