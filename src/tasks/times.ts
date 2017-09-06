@@ -103,10 +103,10 @@ function displayCurrentTask(bot: any, message: any): void {
     } else {
       currentTaskText = 'いまはなにもしていないよー';
     }
-    const webPageUrl = path.join(timesConfig.host, timesConfig.baseUrl, 'times/');
-    const helpPageUrl = path.join(timesConfig.host, timesConfig.baseUrl, 'times/help/');
+    const webPageUrl = timesConfig.host + path.join(timesConfig.baseUrl, 'times/');
+    const helpPageUrl = timesConfig.host + path.join(timesConfig.baseUrl, 'times/help/');
     const context = InteractiveContextManager.getInstance().createContext('times command', message);
-    const reportPageUrl = path.join(timesConfig.host, timesConfig.baseUrl, 'times/report', context.id, '');
+    const reportPageUrl = timesConfig.host + path.join(timesConfig.baseUrl, 'times/report', context.id, '');
     bot.replyPrivate(message, {
       text: currentTaskText,
       attachments: [{

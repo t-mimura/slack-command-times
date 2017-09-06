@@ -1,3 +1,4 @@
+- var oneHourInMillisecond = 60 * 60 * 1000;
 if summarizedData.length === 0
   p nothing
 else
@@ -11,5 +12,11 @@ else
       each summarized in summarizedData
         tr
           td.task-name= summarized.taskName
-          td.total-time= summarized.totalTime
-          td.rate= `${summarized.rate}%`
+          if summarized.totalTime < oneHourInMillisecond
+            td.total-time < 1 hour
+          else
+            td.total-time= `${summarized.totalTime} hour(s)`
+          if summarized.rate < 1
+            td.rate < 1%
+          else
+            td.rate= `${summarized.rate}%`

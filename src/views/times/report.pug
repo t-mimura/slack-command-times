@@ -1,19 +1,42 @@
 extends layout
 
+append head
+  script(src='times/js/d3/d3.min.js')
+  script(src='times/js/d3/d3-legend.min.js')
+  script(src='times/js/pie-chart.js')
+
 block content
   if errorMessage
     p= errorMessage
   else
     - var summarizedData = [];
+    span#tooltip
 
     H1 The last a week
     - summarizedData = lastWeek;
+    if lastWeek.length > 0
+      .pie-chart.last-week
     include report-table.pug
 
     H1 The last half a year
     - summarizedData = lastHalfYear;
+    if lastHalfYear.length > 0
+      .pie-chart.last-half-year
     include report-table.pug
 
     H1 The last a Year
     - summarizedData = lastYear;
+    if lastYear.length > 0
+      .pie-chart.last-year
     include report-table.pug
+
+    script
+      if lastWeek.length > 0
+        - var lastWeekStringified = JSON.stringify(lastWeek);
+        | drawPieChart(!{lastWeekStringified}, '.pie-chart.last-week');
+      if lastHalfYear.length > 0
+        - var lastHalfYearStringified = JSON.stringify(lastHalfYear);
+        | drawPieChart(!{lastHalfYearStringified}, '.pie-chart.last-half-year');
+      if lastYear.length > 0
+        - var lastYearStringified = JSON.stringify(lastYear);
+        | drawPieChart(!{lastYearStringified}, '.pie-chart.last-year');
