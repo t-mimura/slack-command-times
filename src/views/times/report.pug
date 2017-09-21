@@ -18,25 +18,25 @@ block content
       .pie-chart.last-week
     include report-table.pug
 
+    H1 The last a Month
+    - summarizedData = lastMonth;
+    if lastMonth.length > 0
+      .pie-chart.last-month
+    include report-table.pug
+
     H1 The last half a year
     - summarizedData = lastHalfYear;
     if lastHalfYear.length > 0
       .pie-chart.last-half-year
     include report-table.pug
 
-    H1 The last a Year
-    - summarizedData = lastYear;
-    if lastYear.length > 0
-      .pie-chart.last-year
-    include report-table.pug
-
     script
       if lastWeek.length > 0
         - var lastWeekStringified = JSON.stringify(lastWeek);
         | drawPieChart(!{lastWeekStringified}, '.pie-chart.last-week');
+      if lastMonth.length > 0
+        - var lastMonthStringified = JSON.stringify(lastMonth);
+        | drawPieChart(!{lastMonthStringified}, '.pie-chart.last-month');
       if lastHalfYear.length > 0
         - var lastHalfYearStringified = JSON.stringify(lastHalfYear);
         | drawPieChart(!{lastHalfYearStringified}, '.pie-chart.last-half-year');
-      if lastYear.length > 0
-        - var lastYearStringified = JSON.stringify(lastYear);
-        | drawPieChart(!{lastYearStringified}, '.pie-chart.last-year');

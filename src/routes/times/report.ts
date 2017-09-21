@@ -6,24 +6,24 @@ import { InteractiveContext, InteractiveContextManager } from '../../utils/inter
 import { DoneTask, DoneTaskDao } from '../../data-access/done-task-dao';
 
 /**
- * 現在のシステム時刻から1年前のDateオブジェクトを取得します。
- *
- * @return 1年前のDateオブジェクト
- */
-function getOneYearAgo(): Date {
-  const rv = new Date();
-  rv.setFullYear(rv.getFullYear() - 1);
-  return rv;
-}
-
-/**
  * 現在のシステム時刻から半年前のDateオブジェクトを取得します。
  *
  * @return 半年前のDateオブジェクト
  */
 function getHalfYearAgo(): Date {
   const rv = new Date();
-  rv.setDate(rv.getDate() - 363);
+  rv.setDate(rv.getDate() - 183);
+  return rv;
+}
+
+/**
+ * 現在のシステム時刻から1ヵ月前(30日前)のDateオブジェクトを取得します。
+ *
+ * @return 1ヵ月(30日)前のDateオブジェクト
+ */
+function getOneMonthAgo(): Date {
+  const rv = new Date();
+  rv.setDate(rv.getDate() - 30);
   return rv;
 }
 
@@ -110,12 +110,12 @@ function createRouter(baseUrl: string): any {
         return;
       }
       const dtDao = new DoneTaskDao();
-      dtDao.findAfter(context.message, resetTime(getOneYearAgo())).then(result => {
+      dtDao.findAfter(context.message, resetTime(getHalfYearAgo())).then(result => {
         const lastWeekData = summarize(result, resetTime(getOneWeekAgo()));
+        const lastMonthData = summarize(result, resetTime(getOneMonthAgo()));
         const lastHalfYearData = summarize(result, resetTime(getHalfYearAgo()));
-        const lastYearData = summarize(result, resetTime(getOneYearAgo()));
         res.render('times/report', { title: 'Timesコマンド - 集計', baseUrl: baseUrl,
-            lastWeek: lastWeekData, lastHalfYear: lastHalfYearData, lastYear: lastYearData });
+            lastWeek: lastWeekData, lastMonth: lastMonthData, lastHalfYear: lastHalfYearData });
       }).catch(reason => {
         res.render('times/report', { title: 'Timesコマンド - 集計', baseUrl: baseUrl,
              errorMessage: '内部エラーが発生しました。' });
