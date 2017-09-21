@@ -106,7 +106,7 @@ function createRouter(baseUrl: string): any {
       const context = InteractiveContextManager.getInstance().getContext(id);
       if (!context) {
         res.render('times/report', { title: 'Timesコマンド - 集計', baseUrl: baseUrl,
-            errorMessage: 'IDの有効期限が切れています。' });
+            errorMessage: '指定のURLは現在有効ではありません。' });
         return;
       }
       const dtDao = new DoneTaskDao();
