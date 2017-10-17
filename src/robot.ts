@@ -16,7 +16,7 @@ const env = {
   json_file_store_path: path.join(__dirname,  '../.times/.json_file_store/')
 };
 
-const scopes = ['commands'];
+const scopes = ['commands', 'emoji:read'];
 
 const controller = botkit.slackbot({
   debug: false,

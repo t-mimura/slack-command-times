@@ -127,8 +127,7 @@ function createRouter(baseUrl: string): any {
       }
       const dtDao = new DoneTaskDao();
       dtDao.findAfter(context.message, resetTime(getHalfYearAgo())).then(result => {
-        const emojiTool: EmojiTool = new EmojiTool();
-        emojiTool.initialize().then(() => {
+        EmojiTool.getInstance(context.message.team_id).then((emojiTool) => {
           const lastWeekData = emojify(summarize(result, resetTime(getOneWeekAgo())), emojiTool);
           const lastMonthData = emojify(summarize(result, resetTime(getOneMonthAgo())), emojiTool);
           const lastHalfYearData = emojify(summarize(result, resetTime(getHalfYearAgo())), emojiTool);
