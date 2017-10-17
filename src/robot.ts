@@ -4,6 +4,7 @@ import * as express from 'express';
 
 import { logger } from './utils/logger';
 import { TaskFunction } from './tasks/common';
+import { TokenUtil } from './utils/token-utils';
 // tasks
 import { christmasTimesTask } from './tasks/christmas-times';
 import { timesTask } from './tasks/times';
@@ -15,7 +16,7 @@ const env = {
   json_file_store_path: path.join(__dirname,  '../.times/.json_file_store/')
 };
 
-const scopes = ['commands'];
+const scopes = ['commands', 'emoji:read'];
 
 const controller = botkit.slackbot({
   debug: false,
@@ -25,6 +26,7 @@ const controller = botkit.slackbot({
   clientSecret: secrets.clientSecret,
   scopes: scopes
 });
+TokenUtil.setController(controller);
 
 const slashCommands : { [key: string]: TaskFunction } = {
   '/times': timesTask,

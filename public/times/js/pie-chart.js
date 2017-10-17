@@ -8,11 +8,10 @@ function drawPieChart(dataset, selectorText) {
    */
   /* -------------------------------定数/変数定義---------------------------------------------*/
   var graphSize = 300;
-  var legendWidth = 400;
   var graphMargin = 20;
   var height = graphSize;
-  var width = graphSize + legendWidth;
-  var radius = (graphSize - 10) / 2;
+  var width = graphSize;
+  var radius = (graphSize - graphMargin) / 2;
   var colors = [
       '#8BD5DF', '#C3DECC', '#EAE6BC', '#F78F21', '#FC7100', '#8CF349', '#DDEC62', '#A99CE3', '#EA54BC', '#DAA52D',
       /*'#0B8341', '#B5F314', '#FDC6F8', '#F88C29', '#75F978', '#D695D6', '#F66CB9', '#FC78FF', '#3EBA3E', '#0BD6A5'*/];
@@ -51,6 +50,7 @@ function drawPieChart(dataset, selectorText) {
   dataset = combineSubordinates(dataset, colors.length);
   var tooltip = d3.select('span#tooltip');
   var svg = d3.select(selectorText).append('svg')
+      .attr('class', 'graph')
       .attr('height', height)
       .attr('width', width);
   var graphGroup = svg.append('g')
@@ -70,7 +70,7 @@ function drawPieChart(dataset, selectorText) {
       .attr('fill', function(d) {
           return colorScale(d.data.taskName);
       })
-      .on('mouseover', function(d) { return tooltip.style('visibility', 'visible').text(d.data.taskName); })
+      .on('mouseover', function(d) { return tooltip.style('visibility', 'visible').html(d.data.taskName); })
       .on('mousemove', function(d) { return tooltip.style('top', (event.pageY - 20)+ 'px').style('left', (event.pageX - 10) + 'px'); })
       .on('mouseout', function(d) { return tooltip.style('visibility', 'hidden'); });
   var texts = graphParts.append('text')
@@ -85,12 +85,15 @@ function drawPieChart(dataset, selectorText) {
         }
       });
   /* -------------------------------D3凡例処理---------------------------------------------*/
-  var legendPath = d3.legendColor()
-      .scale(colorScale)
-      .labelWrap(width - graphSize - graphMargin)
-      .title('LEGEND');
-  var legendGroup = svg.append('g')
-      .attr('class', 'legendLinear')
-      .attr('transform', 'translate(' + (graphSize + graphMargin) + ', 20)')
-      .call(legendPath);
+  var legendDiv = d3.select(selectorText).append('div')
+      .attr('class', 'legend');
+  var legendParts = legendDiv.selectAll('div')
+      .data(dataset)
+      .enter()
+      .append('div');
+  var legendRects = legendParts.append('span')
+      .attr('style', function(d) { return 'color:' + colorScale(d.taskName); })
+      .text('■ ');
+  var legendTexts = legendParts.append('span')
+      .html(function(d) { return d.taskName; });
 }

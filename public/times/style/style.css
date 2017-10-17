@@ -29,6 +29,10 @@ span#tooltip {
   opacity: 0.8;
 }
 
+svg.graph, div.legend {
+  float: left;
+}
+
 /* テーブル */
 table.summarized {
   width: 100%;

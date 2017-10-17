@@ -11,7 +11,7 @@ else
     tbody
       each summarized in summarizedData
         tr
-          td.task-name= summarized.taskName
+          td.task-name !{summarized.taskName}
           - var totalTimeInHour = Math.floor(summarized.totalTime / oneHourInMillisecond);
           if totalTimeInHour < 1
             td.total-time < 1 hour
