@@ -5,6 +5,8 @@ import * as moment from 'moment';
 import { InteractiveContext, InteractiveContextManager } from '../../utils/interactive-message-utils';
 import { DoneTask, DoneTaskDao } from '../../data-access/done-task-dao';
 
+import { EmojiTool } from '../../utils/emoji-utils';
+
 /**
  * 現在のシステム時刻から半年前のDateオブジェクトを取得します。
  *
@@ -97,6 +99,20 @@ function summarize(doneTasks: DoneTask[], startDate: Date): SummarizedDoneTask[]
   return result;
 }
 
+/**
+ * タスク名を絵文字対応に変換します。
+ *
+ * @param tasks 絵文字対応に変換したいタスクリスト
+ * @param emojiTool Emojiツール
+ * @return 絵文字対応したタスクリスト
+ */
+function emojify(tasks: SummarizedDoneTask[], emojiTool: EmojiTool): SummarizedDoneTask[] {
+  tasks.forEach(task => {
+    task.taskName = emojiTool.emojify(task.taskName);
+  });
+  return tasks;
+}
+
 function createRouter(baseUrl: string): any {
   const router = express.Router();
 
@@ -111,11 +127,17 @@ function createRouter(baseUrl: string): any {
       }
       const dtDao = new DoneTaskDao();
       dtDao.findAfter(context.message, resetTime(getHalfYearAgo())).then(result => {
-        const lastWeekData = summarize(result, resetTime(getOneWeekAgo()));
-        const lastMonthData = summarize(result, resetTime(getOneMonthAgo()));
-        const lastHalfYearData = summarize(result, resetTime(getHalfYearAgo()));
-        res.render('times/report', { title: 'Timesコマンド - 集計', baseUrl: baseUrl,
-            lastWeek: lastWeekData, lastMonth: lastMonthData, lastHalfYear: lastHalfYearData });
+        const emojiTool: EmojiTool = new EmojiTool();
+        emojiTool.initialize().then(() => {
+          const lastWeekData = emojify(summarize(result, resetTime(getOneWeekAgo())), emojiTool);
+          const lastMonthData = emojify(summarize(result, resetTime(getOneMonthAgo())), emojiTool);
+          const lastHalfYearData = emojify(summarize(result, resetTime(getHalfYearAgo())), emojiTool);
+          res.render('times/report', { title: 'Timesコマンド - 集計', baseUrl: baseUrl,
+              lastWeek: lastWeekData, lastMonth: lastMonthData, lastHalfYear: lastHalfYearData });
+        }).catch(reason => {
+          res.render('times/report', { title: 'Timesコマンド - 集計', baseUrl: baseUrl,
+              errorMessage: '内部エラーが発生しました。' });
+        });
       }).catch(reason => {
         res.render('times/report', { title: 'Timesコマンド - 集計', baseUrl: baseUrl,
              errorMessage: '内部エラーが発生しました。' });
