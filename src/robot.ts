@@ -2,6 +2,8 @@ import * as botkit from 'botkit';
 import * as path from 'path';
 import * as express from 'express';
 
+import * as compileSass from 'express-compile-sass';
+
 import { logger } from './utils/logger';
 import { TaskFunction } from './tasks/common';
 import { TokenUtil } from './utils/token-utils';
@@ -50,14 +52,22 @@ export const start = () => {
     const logErrors = (err, req, res, next) => {
       logger.error(err.stack);
       next(err);
-    }
+    };
+    const publicRoot = path.join(__dirname, 'public-root');
     webserver.set('views', path.join(__dirname, 'views'));
     webserver.set('view engine', 'pug');
 
-    webserver.use(express.static(path.join(__dirname, 'public')));
+    webserver.use(compileSass({
+      root: publicRoot,
+      sourceMap: false,
+      sourceComments: false,
+      watchFiles: true,
+      logToConsole: false
+    }));
+    webserver.use(express.static(publicRoot));
     webserver.use('/times', require('./routes/times/index')(timesConfig.baseUrl, scopes.join(','), secrets.clientId));
     webserver.use('/times/report', require('./routes/times/report')(timesConfig.baseUrl));
-    webserver.use('/times/help', require('./routes/times/help')(timesConfig.baseUrl));
+    webserver.use('/times/help', require('./routes/times/help')(timesConfig.baseUrl, scopes.join(','), secrets.clientId));
     webserver.use(logErrors);
 
     controller

@@ -1,6 +1,86 @@
 extends layout
 
-block content
-  h1 ヘルプページ
-  p 作成中です。
+append head
+  link(rel='stylesheet', type='text/css', href='times/style/help.scss')
 
+block content
+  h1 timesコマンドのヘルプページです
+  h2 timesコマンドとは
+  p
+    | timesコマンドは Slack のスラッシュカスタムコマンドです。
+  p
+    | timesコマンドを使うことで、Slack上で自分が何の作業をしているのか共有することができ、また、どの作業をどのくらいの時間行ったか、あとで確認することが出来ます。
+    | Slack に自分の(times)チャンネルを作っている場合などは特に便利です。
+
+  h2 導入の仕方
+  p
+    | Webブラウザでお使いのSlackのチームにログインした状態で、下記のURLへアクセスしてください。
+    br
+    | (すでにチーム内に timesコマンドが導入されている場合はこの操作は不要です。そのままお使いいただけます。)
+    br
+    a(href=`https://slack.com/oauth/authorize?scope=${scopes}&client_id=${secrets_clientId}`, target='_blank')
+      img(alt="Add to Slack" height="40" width="139"
+        src="https://platform.slack-edge.com/img/add_to_slack.png"
+        srcset="https://platform.slack-edge.com/img/add_to_slack.png 1x, https://platform.slack-edge.com/img/add_to_slack@2x.png 2x")
+    br
+    | 操作を続けると timesコマンドに与える権限が表示されます。
+    | 問題なければ先に進んでください。
+
+  h2 基本の使い方
+  p
+    | たとえば「ヘルプページを作る」という作業を開始する場合、次のようにコマンドを打ちます。
+    pre
+      | /times ヘルプページを作る
+    figure.screen-shot
+      image(src='times/images/basic-usage-001.png', alt='実行例1')
+      figcaption 実行例1
+    | 違う作業を開始するときは、再度、次のようにコマンドを打ちます。
+    pre
+      | /times 違う作業をする
+    figure.screen-shot
+      image(src='times/images/basic-usage-002.png', alt='実行例2')
+      figcaption 実行例2
+    | その日の仕事を終える場合は、次のようにコマンドを打ちます。
+    pre
+      | /times clock out
+    | その日の作業と作業時間が一覧表示されて終わります。
+    figure.screen-shot
+      image(src='times/images/basic-usage-003.png', alt='実行例3')
+      figcaption 実行例3
+
+  h2 現在の状況を確認する
+  p
+    | 次のように、なにもつけずにコマンドのみ入力します。
+    pre
+      | /times
+    figure.screen-shot
+      image(src='times/images/advance-usage-001.png', alt='実行例4')
+      figcaption 実行例4
+    | 現在実行中の作業とレポートページおよびヘルプページへのリンクが表示されます。それぞれ次のようになります。
+    figure.screen-shot
+      image(src='times/images/advance-usage-003.png', alt='実行例4の解説')
+      figcaption 実行例4の解説
+    ol(type='A')
+      li 現在の作業
+      li レポートページへのリンク
+      li ヘルプページへのリンク
+    | 作業中に実行した場合は下記のようになります。
+    figure.screen-shot
+      image(src='times/images/advance-usage-002.png', alt='実行例5')
+      figcaption 実行例5
+
+  h2 過去を振り返りたいとき
+  p
+    | 前項を参考に、なにもつけずにtimesコマンドを打ちます。
+    | timesコマンドの応答の中に、レポートページへのリンクが含まれていますが、
+    | そのページを表示することで、直近1週間、3ヵ月、半年の作業とその作業時間の集計が確認できます。
+    figure.screen-shot
+      image(src='times/images/advance-usage-004.png', alt='レポートページ例')
+      figcaption レポートページ例
+
+  h2 ヘルプページの存在
+  p
+    | 前々項を参考に、なにもつけずにtimesコマンドを打ちます。
+    | timesコマンドの応答の中に、ヘルプページへのリンクが含まれています。
+    br
+    | ヘルプページはいまご覧のページです！！
