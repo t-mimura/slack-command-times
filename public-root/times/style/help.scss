@@ -1,0 +1,20 @@
+pre {
+  background-color: #FFFAED;
+
+  padding: 0.5em;
+}
+
+.screen-shot {
+  border: solid 1px #DDDDDD;
+  padding: 5px;
+  display: table;
+  width: 100px;
+
+  img {
+    border: solid 1px #DDDDDD;
+  }
+
+  figcaption {
+    font-size: smaller;
+  }
+}
