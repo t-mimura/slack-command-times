@@ -1,11 +1,10 @@
-import * as request from 'request';
 import * as express from 'express';
-import * as moment from 'moment';
 
-import { InteractiveContext, InteractiveContextManager } from '../../utils/interactive-message-utils';
-import { DoneTask, DoneTaskDao } from '../../data-access/done-task-dao';
+import { InteractiveContextManager } from '../utils/interactive-message-utils';
+import { DoneTask, DoneTaskDao } from '../data-access/done-task-dao';
 
-import { EmojiTool } from '../../utils/emoji-utils';
+import { EmojiTool } from '../utils/emoji-utils';
+import { logger } from '../utils/logger';
 
 /**
  * 現在のシステム時刻から半年前のDateオブジェクトを取得します。
@@ -121,28 +120,33 @@ function createRouter(baseUrl: string): any {
     if (id) {
       const context = InteractiveContextManager.getInstance().getContext(id);
       if (!context) {
-        res.render('times/report', { title: 'Timesコマンド - 集計', baseUrl: baseUrl,
+        res.render('report', { title: 'Timesコマンド - 集計', baseUrl: baseUrl,
             errorMessage: '指定のURLは現在有効ではありません。' });
         return;
       }
       const dtDao = new DoneTaskDao();
-      dtDao.findAfter(context.message, resetTime(getHalfYearAgo())).then(result => {
-        EmojiTool.getInstance(context.message.team_id).then((emojiTool) => {
+      dtDao.findAfter(context.command, resetTime(getHalfYearAgo())).then(result => {
+        if (context.context.botToken === undefined) {
+          return;
+        }
+        EmojiTool.getInstance(context.command.team_id, context.context.botToken).then((emojiTool) => {
           const lastWeekData = emojify(summarize(result, resetTime(getOneWeekAgo())), emojiTool);
           const lastMonthData = emojify(summarize(result, resetTime(getOneMonthAgo())), emojiTool);
           const lastHalfYearData = emojify(summarize(result, resetTime(getHalfYearAgo())), emojiTool);
-          res.render('times/report', { title: 'Timesコマンド - 集計', baseUrl: baseUrl,
+          res.render('report', { title: 'Timesコマンド - 集計', baseUrl: baseUrl,
               lastWeek: lastWeekData, lastMonth: lastMonthData, lastHalfYear: lastHalfYearData });
         }).catch(reason => {
-          res.render('times/report', { title: 'Timesコマンド - 集計', baseUrl: baseUrl,
+          logger.exception(reason);
+          res.render('report', { title: 'Timesコマンド - 集計', baseUrl: baseUrl,
               errorMessage: '内部エラーが発生しました。' });
         });
       }).catch(reason => {
-        res.render('times/report', { title: 'Timesコマンド - 集計', baseUrl: baseUrl,
+        logger.exception(reason);
+        res.render('report', { title: 'Timesコマンド - 集計', baseUrl: baseUrl,
              errorMessage: '内部エラーが発生しました。' });
       });
     } else {
-      res.render('times/report', { title: 'Timesコマンド - 集計', baseUrl: baseUrl,
+      res.render('report', { title: 'Timesコマンド - 集計', baseUrl: baseUrl,
           errorMessage: 'URLの指定が間違っています。' });
     }
   });

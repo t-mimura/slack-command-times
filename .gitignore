@@ -46,3 +46,4 @@ jspm_packages
 .times/.json_file_store
 .times/log4js.config.json
 .times/gcloud.apikey.json
+.times/installation.json
