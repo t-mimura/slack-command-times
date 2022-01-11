@@ -1,15 +1,17 @@
 import * as path from 'path';
-import * as moment from 'moment';
+import { DateTime } from 'luxon';
+import humanizeDuration from 'humanize-duration';
 
 import { TaskFunction } from './common';
 import { CurrentTask, CurrentTaskDao } from '../data-access/current-task-dao';
 import { DoneTask, DoneTaskDao } from '../data-access/done-task-dao';
-import { InteractiveContext, InteractiveContextManager } from '../utils/interactive-message-utils';
+import { InteractiveContextManager } from '../utils/interactive-message-utils';
+import { Context, RespondFn, SlashCommand } from '@slack/bolt';
 
 const timesConfig = require('../../.times/times.config.json');
 
 // TODO: ユーザ情報からそのユーザのタイムゾーンを取得したい
-const TIME_ZONE = 9 * 60;
+const TIME_ZONE = 'UTC+9';
 /** 不正な作業終了時間を設定した場合のエラー */
 const INVALID_BACK_DATE = 'INVALID_BACK_DATE';
 
@@ -33,11 +35,11 @@ function getLatestDate(hhmm: string): Date {
   const splited = hhmm.split(':');
   const hour = Number(splited[0]);
   const minute = Number(splited[1]);
-  const target = moment().utcOffset(TIME_ZONE).hour(hour).minute(minute);
-  if (target.isAfter(moment())) {
-    target.subtract(1, 'days');
+  let target = DateTime.now().setZone(TIME_ZONE).set({ hour, minute });
+  if (target > DateTime.now()) {
+    target = target.minus({ day: 1 });
   }
-  return target.toDate();
+  return target.toJSDate();
 }
 
 /**
@@ -91,23 +93,23 @@ function finishCurrentTask(currentTask: CurrentTask, backDate: Date): void {
 
 /**
  * 現在作業しているタスクの名前をレスポンスします。
- * @param bot bot オブジェクト
- * @param message messageオブジェクト
+ * @param command command オブジェクト
+ * @param respond respond
  */
-function displayCurrentTask(bot: any, message: any): void {
+function displayCurrentTask(command: SlashCommand, respond: RespondFn, context: Context): void {
   const ctDao = new CurrentTaskDao();
-  ctDao.findLatest(message).then(result => {
+  ctDao.findLatest(command).then(result => {
     let currentTaskText: string = '';
     if (result) {
       currentTaskText = `いまは「 ${result.taskName} 」をやっているよー `;
     } else {
       currentTaskText = 'いまはなにもしていないよー';
     }
-    const webPageUrl = timesConfig.host + path.join(timesConfig.baseUrl, 'times/');
-    const helpPageUrl = timesConfig.host + path.join(timesConfig.baseUrl, 'times/help/');
-    const context = InteractiveContextManager.getInstance().createContext('times command', message);
-    const reportPageUrl = timesConfig.host + path.join(timesConfig.baseUrl, 'times/report', context.id, '');
-    bot.replyPrivate(message, {
+    const webPageUrl = timesConfig.host + path.join(timesConfig.baseUrl, '');
+    const helpPageUrl = timesConfig.host + path.join(timesConfig.baseUrl, 'help/');
+    const reportContext = InteractiveContextManager.getInstance().createContext('times command', command, context);
+    const reportPageUrl = timesConfig.host + path.join(timesConfig.baseUrl, 'report', reportContext.id, '');
+    respond({
       text: currentTaskText,
       attachments: [{
         fallback: `report page: <${reportPageUrl}>`,
@@ -146,7 +148,7 @@ function listupTasksForDisplay(doneTasks: DoneTask[]): string {
   taskNames.forEach(taskName => {
     result.push([
       `"${taskName}"`,
-      moment.duration(totalPerTaskName[taskName], 'millisecond').humanize(),
+      humanizeDuration(totalPerTaskName[taskName], { round: true }),
       '(' + Math.floor(totalPerTaskName[taskName] / wholeTotal * 100) + '%)'
     ].join(' '));
   });
@@ -155,15 +157,15 @@ function listupTasksForDisplay(doneTasks: DoneTask[]): string {
 
 /**
  * 当日の作業を集計して終了タスクに移動します。
- * @param bot botオブジェクト
- * @param message messageオブジェクト
+ * @param command command オブジェクト
+ * @param respond respond
  */
-function clockOut(bot: any, message: any): void {
+function clockOut(command: SlashCommand, respond: RespondFn): void {
   const ctDao = new CurrentTaskDao();
 
-  ctDao.findAll(message).then(currentTasks => {
+  ctDao.findAll(command).then(currentTasks => {
     if (currentTasks.length === 0) {
-      bot.replyPrivate(message, '今日はまだ働いてないよ :sleeping:');
+      respond('今日はまだ働いてないよ :sleeping:');
       return;
     }
     // 当日タスクから終了タスクを作成する.
@@ -177,18 +179,18 @@ function clockOut(bot: any, message: any): void {
       };
     });
     // 当日タスクを全て削除する
-    ctDao.remove(message).then(result => {
+    ctDao.remove(command).then(result => {
       // 終了タスクを追加する
       const dtDao = new DoneTaskDao();
       dtDao.addAll(doneTasks).then(result => {
         const listups = listupTasksForDisplay(doneTasks);
-        bot.replyPrivate(message, OK_RESPONSE_TEXT);
-        bot.replyPublicDelayed(message, {
-          text: `<@${message.user_id}>さん、おつかれさまー :honey_pot:`,
+        respond({
+          text: `<@${command.user_id}>さん、おつかれさまー :honey_pot:`,
           attachments: [{
             text: listups,
             color: timesConfig.attachmentsColor
-          }]
+          }],
+          response_type: 'in_channel'
         });
       });
     });
@@ -197,14 +199,14 @@ function clockOut(bot: any, message: any): void {
 
 /**
  * 新規のタスクを開始します。
- * @param bot botオブジェクト
- * @param message messageオブジェクト
+ * @param command command オブジェクト
+ * @param respond respond 関数
  */
-function startTask(bot: any, message: any): void {
-  const command = parseCommand(message.text);
+function startTask(command: SlashCommand, respond: RespondFn): void {
+  const inputed = parseCommand(command.text);
   const ctDao = new CurrentTaskDao();
-  const startTime = command.backDate ? command.backDate : new Date();
-  ctDao.findLatest(message).then(current => {
+  const startTime = inputed.backDate ? inputed.backDate : new Date();
+  ctDao.findLatest(command).then(current => {
     let currentUpdatePromise: Promise<any>;
     if (current) {
       // 現在のタスクを終了
@@ -212,7 +214,7 @@ function startTask(bot: any, message: any): void {
         finishCurrentTask(current, startTime);
       } catch(e) {
         if (e.message === INVALID_BACK_DATE) {
-          bot.replyPrivate(message, 'いまの作業の開始時刻よりも前の時間は設定できないよー');
+          respond('いまの作業の開始時刻よりも前の時間は設定できないよー');
           return;
         } else {
           throw e;
@@ -227,15 +229,17 @@ function startTask(bot: any, message: any): void {
       const newTask: CurrentTask = {
         startTime: startTime,
         endTime: undefined,
-        taskName: command.taskName,
-        teamId: message.team_id,
-        userId: message.user_id
+        taskName: inputed.taskName,
+        teamId: command.team_id,
+        userId: command.user_id
       };
       ctDao.upsert(newTask).then(result => {
-        bot.replyPrivate(message, OK_RESPONSE_TEXT);
-        const startTimeString = moment(newTask.startTime.getTime()).format('HH:mm');
+        const startTimeString = DateTime.fromJSDate(newTask.startTime).setZone(TIME_ZONE).toFormat('HH:mm');
         const replySuffix = command.backDate ? 'やってるぞー！' : 'やるぞー！';
-        bot.replyPublicDelayed(message, `⏰ (${startTimeString}) <@${message.user_id}>さん: 「 ${command.taskName} 」${replySuffix}`);
+        respond({
+          text: `⏰ (${startTimeString}) <@${command.user_id}>さん: 「 ${inputed.taskName} 」${replySuffix}`,
+          response_type: 'in_channel'
+        });
       });
     });
   });
@@ -243,15 +247,13 @@ function startTask(bot: any, message: any): void {
 
 /**
  * timesコマンドを実行する関数です。
- * @param bot bot
- * @param message message
  */
-export const timesTask: TaskFunction = (bot, message) => {
-  if (message.text === '') {
-    displayCurrentTask(bot, message);
-  } else if (message.text === 'clock out') {
-    clockOut(bot, message);
+export const timesTask: TaskFunction = (command, respond, context) => {
+  if (command.text === '') {
+    displayCurrentTask(command, respond, context);
+  } else if (command.text === 'clock out') {
+    clockOut(command, respond);
   }else {
-    startTask(bot, message);
+    startTask(command, respond);
   }
 };

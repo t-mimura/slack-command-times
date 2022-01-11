@@ -1,10 +1,11 @@
-import * as Datastore from '@google-cloud/datastore';
+import { Datastore } from '@google-cloud/datastore';
+import { SlashCommand } from '@slack/bolt';
 import { logger } from '../utils/logger';
 import DatastoreSetting from './common-setting';
 
 const KIND = DatastoreSetting.KIND.CURRENT_TASK;
 
-const datastore = Datastore({
+const datastore = new Datastore({
   keyFilename: DatastoreSetting.GCOUND_API_KEY_FILE_PATH
 });
 
@@ -53,29 +54,25 @@ function doErrorProcess(reason: any): any {
 export class CurrentTaskDao {
   /**
    * 該当ユーザのCurrentTaskを全て検索します。
-   * @param message 該当ユーザを紐付けるためのmessageオブジェクト
+   * @param command 該当ユーザを紐付けるためのcommandオブジェクト
    * @return 検索結果を受け取るPromise
    */
-  findAll(message: any): Promise<CurrentTask[]> {
+  findAll(command: SlashCommand): Promise<CurrentTask[]> {
     const query = datastore.createQuery(KIND)
-      .filter('teamId', message.team_id)
-      .filter('userId', message.user_id);
+      .filter('teamId', command.team_id)
+      .filter('userId', command.user_id);
     return datastore.runQuery(query).then(entities => {
-      if (entities.length === 0) {
-        return [];
-      } else {
-        return entities[0];
-      }
+      return entities[0];
     }).catch(doErrorProcess);
   }
 
   /**
    * 該当ユーザの直近の CurrentTask を検索します。
-   * @param message 検索条件になるmessageオブジェクト
+   * @param command 検索条件になるcommandオブジェクト
    * @return 検索結果を受け取るPromise
    */
-  findLatest(message: any): Promise<CurrentTask | null> {
-    return this.findAll(message).then(tasks => {
+  findLatest(command: SlashCommand): Promise<CurrentTask | null> {
+    return this.findAll(command).then(tasks => {
       let result: CurrentTask | null = null;
       tasks.forEach(task => {
         if (!task.endTime) {
@@ -100,7 +97,7 @@ export class CurrentTaskDao {
         const incompleteKey = datastore.key([KIND]);
         return transaction.allocateIds(incompleteKey, 1).then(results => {
           const key = results[0][0];
-          currentTask.id = parseInt(key.id);
+          currentTask.id = Number(key.id);
           return key;
         });
       }
@@ -115,15 +112,17 @@ export class CurrentTaskDao {
 
   /**
    * ユーザ単位で一括で当日のタスクを削除します。
-   * @param message 削除するユーザのmessageオブジェクト
+   * @param command 削除するユーザのcommmandオブジェクト
    */
-  remove(message: any): Promise<any> {
+  remove(command: SlashCommand): Promise<any> {
     const transaction = datastore.transaction();
     return transaction.run().then(() => {
-      return this.findAll(message).then(tasks => {
+      return this.findAll(command).then(tasks => {
         const keys: any[] = [];
         tasks.forEach(task => {
-          keys.push(datastore.key([KIND, task.id]));
+          if (task.id !== undefined) {
+            keys.push(datastore.key([KIND, task.id]));
+          }
         });
         return keys;
       });

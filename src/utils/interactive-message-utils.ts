@@ -1,3 +1,4 @@
+import { Context, SlashCommand } from '@slack/bolt';
 import * as uuid from 'uuid';
 
 /**
@@ -6,7 +7,8 @@ import * as uuid from 'uuid';
 export type InteractiveContext = {
   id: string;
   actionName: string;
-  message: any;
+  command: SlashCommand;
+  context: Context;
 }
 
 /**
@@ -46,15 +48,17 @@ export class InteractiveContextManager {
    * 生成したコンテキストは内部に保持し、IDで後から取得できます。
    *
    * @param actionName アクション名。Slack上でボタンなどの表示を行う時の識別子となります。
-   * @param message ボタンを表示する契機となったユーザ入力のメッセージオブジェクト。
+   * @param command ボタンを表示する契機となったユーザ入力のオブジェクト。
+   * @param context context
    * @return 生成したコンテキスト
    */
-  createContext(actionName: string, message: any): InteractiveContext {
+  createContext(actionName: string, command: SlashCommand, context: Context): InteractiveContext {
     const id = uuid.v4();
     this.contexts[id] = {
       id,
       actionName,
-      message
+      command,
+      context
     };
     setTimeout(() => {
       delete this.contexts[id];

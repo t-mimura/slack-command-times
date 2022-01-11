@@ -2,7 +2,6 @@ import * as NodeEmoji from 'node-emoji';
 import * as request from 'request';
 
 import { logger } from './logger';
-import { TokenUtil } from './token-utils';
 
 /**
  * 文字列をHTMLエスケープします。
@@ -13,7 +12,7 @@ function escape_html (target: string): string {
   if (typeof target !== 'string') {
     return target;
   }
-  return target.replace(/[&'`"<>]/g, match => {
+  return target.replace(/[&'`"<>]/g, (match: string): string => {
     return {
       '&': '&amp;',
       "'": '&#x27;',
@@ -21,7 +20,7 @@ function escape_html (target: string): string {
       '"': '&quot;',
       '<': '&lt;',
       '>': '&gt;',
-    }[match];
+    }[match] || '';
   });
 }
 
@@ -42,28 +41,27 @@ export class EmojiTool {
    * 絵文字ツールのインスタンスを取得します。
    *
    * @param teamId カスタム絵文字を解決したいチームのID
+   * @param token カスタム絵文字を取得するためのtoken
    * @return 絵文字ツールのインスタンス
    */
-  static getInstance(teamId: string): Promise<EmojiTool> {
+  static getInstance(teamId: string, token: string): Promise<EmojiTool> {
     const returnValue = new EmojiTool();
-    return TokenUtil.getTeamCreatorToken(teamId).then(token => {
-      return new Promise<EmojiTool>((resolve, reject) => {
-        request.post('https://slack.com/api/emoji.list', { form: { token } }, (err, httpResponse, body) => {
-          if (err) {
-            logger.error(err);
-            reject(err);
-            return;
-          }
-          if (typeof body === 'string') {
-            body = JSON.parse(body);
-          }
-          if (!body.ok) {
-            logger.error(body);
-            reject(body);
-          }
-          returnValue.customEmoji = body.emoji;
-          resolve(returnValue);
-        });
+    return new Promise<EmojiTool>((resolve, reject) => {
+      request.post('https://slack.com/api/emoji.list', { form: { token } }, (err, httpResponse, body) => {
+        if (err) {
+          logger.error(err);
+          reject(err);
+          return;
+        }
+        if (typeof body === 'string') {
+          body = JSON.parse(body);
+        }
+        if (!body.ok) {
+          logger.error(body);
+          reject(body);
+        }
+        returnValue.customEmoji = body.emoji;
+        resolve(returnValue);
       });
     });
   }

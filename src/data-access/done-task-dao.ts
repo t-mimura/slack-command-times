@@ -1,10 +1,11 @@
-import * as Datastore from '@google-cloud/datastore';
+import { Datastore } from '@google-cloud/datastore';
+import { SlashCommand } from '@slack/bolt';
 import { logger } from '../utils/logger';
 import DatastoreSetting from './common-setting';
 
 const KIND = DatastoreSetting.KIND.DONE_TASK;
 
-const datastore = Datastore({
+const datastore = new Datastore({
   keyFilename: DatastoreSetting.GCOUND_API_KEY_FILE_PATH
 });
 
@@ -52,39 +53,31 @@ function doErrorProcess(reason: any): any {
 export class DoneTaskDao {
   /**
    * 該当ユーザのDoneTaskを全て検索します。
-   * @param message 該当ユーザを紐付けるためのmessageオブジェクト
+   * @param command 該当ユーザを紐付けるための command オブジェクト
    * @return 検索結果を受け取るPromise
    */
-  findAll(message: any): Promise<DoneTask[]> {
+  findAll(command: SlashCommand): Promise<DoneTask[]> {
     const query = datastore.createQuery(KIND)
-      .filter('teamId', message.team_id)
-      .filter('userId', message.user_id);
+      .filter('teamId', command.team_id)
+      .filter('userId', command.user_id);
     return datastore.runQuery(query).then(results => {
-      if (results.length === 0) {
-        return [];
-      } else {
-        return results[0];
-      }
+      return results[0];
     }).catch(doErrorProcess);
   }
 
   /**
    * 該当ユーザの DoneTask を期間を指定して検索します。
-   * @param message 検索条件になるmessageオブジェクト
+   * @param command 検索条件になるcommandオブジェクト
    * @param after この日付より後のデータを取得します。
    * @return 検索結果を受け取るPromise
    */
-  findAfter(message: any, after: Date): Promise<DoneTask[]> {
+  findAfter(command: SlashCommand, after: Date): Promise<DoneTask[]> {
     const query = datastore.createQuery(KIND)
-      .filter('teamId', message.team_id)
-      .filter('userId', message.user_id)
+      .filter('teamId', command.team_id)
+      .filter('userId', command.user_id)
       .filter('startTime', '>', after);
     return datastore.runQuery(query).then(results => {
-      if (results.length === 0) {
-        return [];
-      } else {
-        return results[0];
-      }
+      return results[0];
     }).catch(doErrorProcess);
   }
 

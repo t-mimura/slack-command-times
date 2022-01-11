@@ -1,4 +1,5 @@
-import * as moment from 'moment';
+import { Context, RespondFn, SlashCommand } from '@slack/bolt';
+import { DateTime } from 'luxon';
 import { TaskFunction } from './common';
 
 /**
@@ -6,16 +7,22 @@ import { TaskFunction } from './common';
  * @param bot bot
  * @param message message
  */
-export const christmasTimesTask : TaskFunction = (bot: any, message: any) => {
-  const today = moment().startOf('day');
-  const christmas = moment().month(11).date(25).startOf('day');
-  if (christmas.isBefore(today)) {
-    christmas.add(1, 'y');
+export const christmasTimesTask : TaskFunction = (command: SlashCommand, respond: RespondFn, context: Context) => {
+  const today = DateTime.now().startOf('day');
+  let christmas = DateTime.now().set({ month: 12, day: 25 }).startOf('day');
+  if (christmas < today) {
+    christmas = christmas.plus({ year: 1 });
   }
   const count = christmas.diff(today, 'days');
-  if (count === 0) {
-    bot.replyPublic(message, ':tada: メリークリスマス :gift: :santa:');
+  if (count.days === 0) {
+    respond({
+      text: ':tada: メリークリスマス :gift: :santa:',
+      response_type: 'in_channel'
+    });
   } else {
-    bot.replyPublic(message, `クリスマスまで後 ${count} 日です`);
+    respond({
+      text: `クリスマスまで後 ${count.days} 日です`,
+      response_type: 'in_channel'
+    });
   }
 };

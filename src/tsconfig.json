@@ -1,12 +1,14 @@
 {
   "compilerOptions": {
-    "target": "es2016",
+    "target": "es6",
     "module": "commonjs",
     // "noImplicitAny": true,
     "strictNullChecks": true,
     "sourceMap": true,
     "emitBOM": true,
-    "outDir": "../built"
+    "outDir": "../built",
+    "moduleResolution": "node",
+    "esModuleInterop": true
   },
   "exclude": [
     // "node_modules"
